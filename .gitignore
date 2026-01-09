@@ -1,0 +1,17 @@
+*.local
+*.log
+.DS_Store
+.next/
+.sentryclirc
+.vercel
+.vercel/
+/.env*
+area-bid-helper.zip
+coverage/
+dist/
+node_modules/
+old_backup/
+out/
+playwright-report/
+test-results/
+*.zip
