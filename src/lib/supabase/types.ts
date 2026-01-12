@@ -311,6 +311,284 @@ export type UnifiedEstimateInsert = Omit<UnifiedEstimate, 'id' | 'created_at' | 
 export type EstimateRevisionInsert = Omit<EstimateRevision, 'id' | 'created_at'>;
 
 // ============================================
+// PDF Blueprint Types
+// ============================================
+
+export type PDFDocumentStatus = 'processing' | 'ready' | 'error';
+
+export type PDFPageCategory =
+  | 'site-plan'
+  | 'floor-plan'
+  | 'electrical'
+  | 'mechanical'
+  | 'plumbing'
+  | 'structural'
+  | 'landscape'
+  | 'civil'
+  | 'detail'
+  | 'schedule'
+  | 'cover'
+  | 'other';
+
+export type BlueprintFeatureSource = 'ai-detected' | 'manual' | 'imported';
+
+export interface ScaleInfo {
+  ratio: string; // e.g., "1:50"
+  units: 'feet' | 'meters' | 'inches';
+  pixelsPerUnit: number;
+  calibrated: boolean;
+}
+
+export interface PDFDocument {
+  id: string;
+  organization_id: string | null;
+  uploaded_by: string | null;
+  name: string;
+  storage_path: string;
+  file_size: number | null;
+  page_count: number | null;
+  status: PDFDocumentStatus;
+  error_message: string | null;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PDFPage {
+  id: string;
+  document_id: string;
+  page_number: number;
+  image_path: string;
+  thumbnail_path: string | null;
+  category: PDFPageCategory | null;
+  category_confidence: number | null;
+  scale_info: ScaleInfo | null;
+  ai_analyzed: boolean;
+  analyzed_at: string | null;
+  metadata: Json;
+  created_at: string;
+}
+
+export interface BlueprintFeature {
+  id: string;
+  page_id: string;
+  site_id: string | null;
+  object_type: SiteObjectType;
+  sub_type: string | null;
+  geometry: Json; // Page coordinates (pixels or scaled)
+  measurements: ObjectMeasurements;
+  confidence: number | null;
+  label: string | null;
+  source: BlueprintFeatureSource;
+  approved: boolean;
+  approved_at: string | null;
+  approved_by: string | null;
+  properties: Json;
+  created_at: string;
+}
+
+export interface PDFSiteLink {
+  id: string;
+  document_id: string;
+  site_id: string;
+  linked_by: string | null;
+  linked_at: string;
+  import_settings: Json;
+}
+
+// PDF Insert Types
+export type PDFDocumentInsert = Omit<PDFDocument, 'id' | 'created_at' | 'updated_at'>;
+export type PDFPageInsert = Omit<PDFPage, 'id' | 'created_at'>;
+export type BlueprintFeatureInsert = Omit<BlueprintFeature, 'id' | 'created_at'>;
+export type PDFSiteLinkInsert = Omit<PDFSiteLink, 'id' | 'linked_at'>;
+
+// PDF Update Types
+export type PDFDocumentUpdate = Partial<PDFDocumentInsert>;
+export type PDFPageUpdate = Partial<PDFPageInsert>;
+export type BlueprintFeatureUpdate = Partial<BlueprintFeatureInsert>;
+
+// ============================================
+// Bid Dashboard Types
+// ============================================
+
+export type BidStage =
+  | 'lead'
+  | 'qualifying'
+  | 'proposal'
+  | 'submitted'
+  | 'negotiation'
+  | 'won'
+  | 'lost'
+  | 'archived';
+
+export type BidPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export type BidActivityType =
+  | 'stage_change'
+  | 'note'
+  | 'call'
+  | 'email'
+  | 'meeting'
+  | 'site_visit'
+  | 'rfi'
+  | 'addendum'
+  | 'file_upload'
+  | 'estimate_updated'
+  | 'team_change'
+  | 'created';
+
+export type RFIStatus = 'open' | 'answered' | 'closed' | 'void';
+export type RFIPriority = 'low' | 'normal' | 'high' | 'critical';
+
+export type BidNotificationType =
+  | 'due_date_reminder'
+  | 'due_date_passed'
+  | 'rfi_created'
+  | 'rfi_answered'
+  | 'addendum_issued'
+  | 'stage_change'
+  | 'assignment'
+  | 'mention'
+  | 'estimate_ready'
+  | 'site_visit_reminder';
+
+export type BidDocumentCategory =
+  | 'proposal'
+  | 'contract'
+  | 'plans'
+  | 'specs'
+  | 'photos'
+  | 'correspondence'
+  | 'insurance'
+  | 'permits'
+  | 'other';
+
+export interface Bid {
+  id: string;
+  organization_id: string | null;
+  site_id: string | null;
+  name: string;
+  description: string | null;
+  bid_number: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+  customer_company: string | null;
+  customer_address: string | null;
+  stage: BidStage;
+  stage_updated_at: string;
+  loss_reason: string | null;
+  owner_id: string | null;
+  team_members: string[];
+  bid_due_date: string | null;
+  site_visit_date: string | null;
+  project_start_date: string | null;
+  project_end_date: string | null;
+  estimated_value: number | null;
+  final_value: number | null;
+  probability: number;
+  priority: BidPriority;
+  tags: string[];
+  source: string | null;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BidActivity {
+  id: string;
+  bid_id: string;
+  user_id: string | null;
+  activity_type: BidActivityType;
+  title: string;
+  description: string | null;
+  metadata: Json;
+  created_at: string;
+}
+
+export interface BidRFI {
+  id: string;
+  bid_id: string;
+  number: number;
+  subject: string;
+  question: string;
+  answer: string | null;
+  submitted_by: string | null;
+  submitted_at: string;
+  answered_by: string | null;
+  answered_at: string | null;
+  status: RFIStatus;
+  due_date: string | null;
+  attachments: Array<{ name: string; path: string; size: number }>;
+  priority: RFIPriority;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BidAddendum {
+  id: string;
+  bid_id: string;
+  number: number;
+  title: string;
+  description: string | null;
+  issued_date: string;
+  document_path: string | null;
+  document_name: string | null;
+  acknowledged: boolean;
+  acknowledged_at: string | null;
+  acknowledged_by: string | null;
+  cost_impact: number | null;
+  schedule_impact: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BidNotification {
+  id: string;
+  bid_id: string | null;
+  user_id: string;
+  type: BidNotificationType;
+  title: string;
+  message: string | null;
+  read: boolean;
+  read_at: string | null;
+  action_url: string | null;
+  email_sent: boolean;
+  email_sent_at: string | null;
+  created_at: string;
+}
+
+export interface BidDocument {
+  id: string;
+  bid_id: string;
+  uploaded_by: string | null;
+  name: string;
+  storage_path: string;
+  file_size: number | null;
+  mime_type: string | null;
+  category: BidDocumentCategory | null;
+  version: number;
+  previous_version_id: string | null;
+  description: string | null;
+  metadata: Json;
+  created_at: string;
+}
+
+// Bid Insert Types
+export type BidInsert = Omit<Bid, 'id' | 'created_at' | 'updated_at' | 'stage_updated_at'>;
+export type BidActivityInsert = Omit<BidActivity, 'id' | 'created_at'>;
+export type BidRFIInsert = Omit<BidRFI, 'id' | 'created_at' | 'updated_at' | 'number'>;
+export type BidAddendumInsert = Omit<BidAddendum, 'id' | 'created_at' | 'updated_at' | 'number'>;
+export type BidNotificationInsert = Omit<BidNotification, 'id' | 'created_at'>;
+export type BidDocumentInsert = Omit<BidDocument, 'id' | 'created_at'>;
+
+// Bid Update Types
+export type BidUpdate = Partial<BidInsert>;
+export type BidRFIUpdate = Partial<Omit<BidRFIInsert, 'bid_id'>>;
+export type BidAddendumUpdate = Partial<Omit<BidAddendumInsert, 'bid_id'>>;
+export type BidNotificationUpdate = Partial<Pick<BidNotification, 'read' | 'read_at'>>;
+
+// ============================================
 // Update Types (all fields optional)
 // ============================================
 
@@ -373,6 +651,58 @@ export interface Database {
       estimate_revisions: {
         Row: EstimateRevision;
         Insert: EstimateRevisionInsert;
+        Update: never;
+      };
+      // PDF Blueprint Tables
+      pdf_documents: {
+        Row: PDFDocument;
+        Insert: PDFDocumentInsert;
+        Update: PDFDocumentUpdate;
+      };
+      pdf_pages: {
+        Row: PDFPage;
+        Insert: PDFPageInsert;
+        Update: PDFPageUpdate;
+      };
+      blueprint_features: {
+        Row: BlueprintFeature;
+        Insert: BlueprintFeatureInsert;
+        Update: BlueprintFeatureUpdate;
+      };
+      pdf_site_links: {
+        Row: PDFSiteLink;
+        Insert: PDFSiteLinkInsert;
+        Update: never;
+      };
+      // Bid Dashboard Tables
+      bids: {
+        Row: Bid;
+        Insert: BidInsert;
+        Update: BidUpdate;
+      };
+      bid_activities: {
+        Row: BidActivity;
+        Insert: BidActivityInsert;
+        Update: never;
+      };
+      bid_rfis: {
+        Row: BidRFI;
+        Insert: BidRFIInsert;
+        Update: BidRFIUpdate;
+      };
+      bid_addenda: {
+        Row: BidAddendum;
+        Insert: BidAddendumInsert;
+        Update: BidAddendumUpdate;
+      };
+      bid_notifications: {
+        Row: BidNotification;
+        Insert: BidNotificationInsert;
+        Update: BidNotificationUpdate;
+      };
+      bid_documents: {
+        Row: BidDocument;
+        Insert: BidDocumentInsert;
         Update: never;
       };
     };

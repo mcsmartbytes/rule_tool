@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import mapboxgl, { type MapMouseEvent } from 'mapbox-gl'
 import { useAppStore } from '@/lib/store'
+import { useSiteStore } from '@/lib/site/store'
 import { readToken } from '@/lib/token'
 import { usePricingStore } from '@/lib/pricing-store'
 import type { MeasurementSnapshot } from '@/lib/pricing-types'
@@ -12,11 +13,32 @@ import { useConcreteTool } from '@/tools/useConcreteTool'
 import type { StallGroupMeasurement } from '@/types/measurements'
 import { enableGoogleSatellite, disableGoogleSatellite } from '@/components/maps/useImageryToggle'
 import { GoogleAttributionOverlay } from '@/components/maps/GoogleAttributionOverlay'
+import type { AIDetectedFeature, MapBounds } from '@/lib/ai/types'
 
 const SQFT_PER_SQM = 10.76391041671
 const FT_PER_METER = 3.2808398950131
 
-export default function MapView() {
+export interface MapCaptureResult {
+  image: string;
+  bounds: MapBounds;
+  zoom: number;
+  width: number;
+  height: number;
+}
+
+interface MapViewProps {
+  onGeometryCreate?: (geometry: GeoJSON.Geometry, featureId: string) => void;
+  aiFeatures?: AIDetectedFeature[];
+  highlightedAIFeatureId?: string | null;
+  captureRef?: React.MutableRefObject<(() => Promise<MapCaptureResult | null>) | null>;
+}
+
+export default function MapView({
+  onGeometryCreate,
+  aiFeatures = [],
+  highlightedAIFeatureId,
+  captureRef,
+}: MapViewProps = {}) {
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const drawRef = useRef<MapboxDraw | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -49,6 +71,7 @@ export default function MapView() {
   const computeMeasurementsRef = useRef<(() => void) | null>(null)
   const [stallGroups, setStallGroups] = useState<StallGroupMeasurement[]>([])
   const [liveStallPreview, setLiveStallPreview] = useState<{ rowLengthFt: number; stallCount: number; linealFeet: number } | null>(null)
+  const onGeometryCreateRef = useRef(onGeometryCreate)
   const [imageryMode, setImageryMode] = useState<'mapbox' | 'google'>('mapbox')
   const [googleAttribution, setGoogleAttribution] = useState<string>('')
   const [imageryLoading, setImageryLoading] = useState(false)
@@ -56,6 +79,10 @@ export default function MapView() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    onGeometryCreateRef.current = onGeometryCreate
+  }, [onGeometryCreate])
 
   useEffect(() => {
     heightMeasurementsRef.current = heightMeasurements
@@ -72,6 +99,11 @@ export default function MapView() {
   const commitPricingMeasurements = usePricingStore((s) => s.commitMeasurements)
   const pendingMapFocus = useQuoteStore((s) => s.pendingMapFocus)
   const consumeMapFocus = useQuoteStore((s) => s.consumeMapFocus)
+
+  // Site objects for rendering on map
+  const siteObjects = useSiteStore((s) => s.objects)
+  const selectedObjectId = useSiteStore((s) => s.selectedObjectId)
+  const selectObject = useSiteStore((s) => s.selectObject)
 
   // Stall Tool integration
   useStallTool(mapRef.current, {
@@ -373,9 +405,17 @@ export default function MapView() {
             persistCommittedGeometry()
           }
 
-          const onCreate = () => {
+          const onCreate = (e: any) => {
             compute()
             persistCommittedGeometry()
+            // Notify callback about new geometry
+            if (onGeometryCreateRef.current && e?.features?.length) {
+              for (const feature of e.features) {
+                if (feature.geometry && feature.id) {
+                  onGeometryCreateRef.current(feature.geometry, String(feature.id))
+                }
+              }
+            }
           }
           const onUpdate = () => {
             compute()
@@ -439,10 +479,15 @@ export default function MapView() {
               const coords = simplified.geometry.coordinates.slice()
               if (coords.length > 3) {
                 coords.push(coords[0])
-                const poly = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [coords] } } as any
-                try { (drawRef.current as any)?.add(poly) } catch {}
+                const geometry = { type: 'Polygon', coordinates: [coords] } as GeoJSON.Geometry
+                const poly = { type: 'Feature', properties: {}, geometry } as any
+                const featureIds = (drawRef.current as any)?.add(poly)
                 computeRef.current()
                 persistCommittedGeometry()
+                // Notify callback about new freehand geometry
+                if (onGeometryCreateRef.current && featureIds?.length) {
+                  onGeometryCreateRef.current(geometry, String(featureIds[0]))
+                }
               }
             }
             points = []
@@ -563,6 +608,289 @@ export default function MapView() {
 
     return () => { cancelled = true }
   }, [skipInit, enabled, initTick, updateLivePricingMeasurements, commitPricingMeasurements])
+
+  // Setup capture function for AI detection
+  useEffect(() => {
+    if (!captureRef) return;
+
+    captureRef.current = async (): Promise<MapCaptureResult | null> => {
+      const map = mapRef.current;
+      if (!map) return null;
+
+      try {
+        const canvas = map.getCanvas();
+        const bounds = map.getBounds();
+        const zoom = map.getZoom();
+
+        // Convert canvas to base64
+        const dataUrl = await new Promise<string>((resolve) => {
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              resolve('');
+              return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          }, 'image/png');
+        });
+
+        if (!dataUrl) return null;
+
+        return {
+          image: dataUrl,
+          bounds: {
+            north: bounds.getNorth(),
+            south: bounds.getSouth(),
+            east: bounds.getEast(),
+            west: bounds.getWest(),
+          },
+          zoom,
+          width: canvas.width,
+          height: canvas.height,
+        };
+      } catch (err) {
+        console.error('Failed to capture map:', err);
+        return null;
+      }
+    };
+
+    return () => {
+      if (captureRef) captureRef.current = null;
+    };
+  }, [captureRef]);
+
+  // Render AI detected features as overlay
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const sourceId = 'ai-features-source';
+    const fillLayerId = 'ai-features-fill';
+    const lineLayerId = 'ai-features-line';
+    const highlightLayerId = 'ai-features-highlight';
+
+    // Create GeoJSON from features
+    const geojson: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: aiFeatures.map((f) => ({
+        type: 'Feature',
+        id: f.id,
+        properties: {
+          id: f.id,
+          type: f.type,
+          confidence: f.confidence,
+          highlighted: f.id === highlightedAIFeatureId,
+        },
+        geometry: f.geometry,
+      })),
+    };
+
+    // Add or update source
+    const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
+    if (source) {
+      source.setData(geojson);
+    } else {
+      map.addSource(sourceId, {
+        type: 'geojson',
+        data: geojson,
+      });
+
+      // Add fill layer for polygons
+      map.addLayer({
+        id: fillLayerId,
+        type: 'fill',
+        source: sourceId,
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: {
+          'fill-color': [
+            'case',
+            ['==', ['get', 'type'], 'building-footprint'], '#ef4444',
+            '#6366f1'
+          ],
+          'fill-opacity': [
+            'case',
+            ['get', 'highlighted'], 0.4,
+            0.2
+          ],
+        },
+      });
+
+      // Add line layer for outlines
+      map.addLayer({
+        id: lineLayerId,
+        type: 'line',
+        source: sourceId,
+        paint: {
+          'line-color': [
+            'case',
+            ['==', ['get', 'type'], 'building-footprint'], '#ef4444',
+            '#6366f1'
+          ],
+          'line-width': [
+            'case',
+            ['get', 'highlighted'], 3,
+            2
+          ],
+          'line-dasharray': [2, 2],
+        },
+      });
+    }
+
+    // Cleanup on unmount or when features change
+    return () => {
+      try {
+        if (map.getLayer(fillLayerId)) map.removeLayer(fillLayerId);
+        if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId);
+        if (map.getLayer(highlightLayerId)) map.removeLayer(highlightLayerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+      } catch {}
+    };
+  }, [aiFeatures, highlightedAIFeatureId, mapReadyTick]);
+
+  // Render site objects on map with selection highlighting
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    const sourceId = 'site-objects-source';
+    const fillLayerId = 'site-objects-fill';
+    const lineLayerId = 'site-objects-line';
+    const selectedFillLayerId = 'site-objects-selected-fill';
+    const selectedLineLayerId = 'site-objects-selected-line';
+
+    // Create GeoJSON from site objects
+    const geojson: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: siteObjects.map((obj) => ({
+        type: 'Feature',
+        id: obj.id,
+        properties: {
+          id: obj.id,
+          objectType: obj.object_type,
+          subType: obj.sub_type,
+          label: obj.label,
+          isSelected: obj.id === selectedObjectId,
+        },
+        geometry: obj.geometry,
+      })),
+    };
+
+    // Remove existing layers/source
+    try {
+      if (map.getLayer(selectedLineLayerId)) map.removeLayer(selectedLineLayerId);
+      if (map.getLayer(selectedFillLayerId)) map.removeLayer(selectedFillLayerId);
+      if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId);
+      if (map.getLayer(fillLayerId)) map.removeLayer(fillLayerId);
+      if (map.getSource(sourceId)) map.removeSource(sourceId);
+    } catch {}
+
+    if (siteObjects.length === 0) return;
+
+    // Add source
+    map.addSource(sourceId, {
+      type: 'geojson',
+      data: geojson,
+    });
+
+    // Add fill layer for polygons (non-selected)
+    map.addLayer({
+      id: fillLayerId,
+      type: 'fill',
+      source: sourceId,
+      filter: ['all', ['==', '$type', 'Polygon'], ['!=', ['get', 'isSelected'], true]],
+      paint: {
+        'fill-color': '#3b82f6',
+        'fill-opacity': 0.2,
+      },
+    });
+
+    // Add line layer (non-selected)
+    map.addLayer({
+      id: lineLayerId,
+      type: 'line',
+      source: sourceId,
+      filter: ['!=', ['get', 'isSelected'], true],
+      paint: {
+        'line-color': '#3b82f6',
+        'line-width': 2,
+      },
+    });
+
+    // Add selected fill layer
+    map.addLayer({
+      id: selectedFillLayerId,
+      type: 'fill',
+      source: sourceId,
+      filter: ['all', ['==', '$type', 'Polygon'], ['==', ['get', 'isSelected'], true]],
+      paint: {
+        'fill-color': '#f59e0b',
+        'fill-opacity': 0.4,
+      },
+    });
+
+    // Add selected line layer
+    map.addLayer({
+      id: selectedLineLayerId,
+      type: 'line',
+      source: sourceId,
+      filter: ['==', ['get', 'isSelected'], true],
+      paint: {
+        'line-color': '#f59e0b',
+        'line-width': 4,
+      },
+    });
+
+    // Add click handler to select objects
+    const handleClick = (e: MapMouseEvent) => {
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: [fillLayerId, lineLayerId, selectedFillLayerId, selectedLineLayerId],
+      });
+
+      if (features.length > 0) {
+        const clickedId = features[0].properties?.id;
+        if (clickedId) {
+          selectObject(clickedId === selectedObjectId ? null : clickedId);
+        }
+      }
+    };
+
+    map.on('click', fillLayerId, handleClick);
+    map.on('click', lineLayerId, handleClick);
+    map.on('click', selectedFillLayerId, handleClick);
+    map.on('click', selectedLineLayerId, handleClick);
+
+    // Change cursor on hover
+    const handleMouseEnter = () => {
+      map.getCanvas().style.cursor = 'pointer';
+    };
+    const handleMouseLeave = () => {
+      map.getCanvas().style.cursor = '';
+    };
+
+    map.on('mouseenter', fillLayerId, handleMouseEnter);
+    map.on('mouseenter', lineLayerId, handleMouseEnter);
+    map.on('mouseleave', fillLayerId, handleMouseLeave);
+    map.on('mouseleave', lineLayerId, handleMouseLeave);
+
+    return () => {
+      map.off('click', fillLayerId, handleClick);
+      map.off('click', lineLayerId, handleClick);
+      map.off('click', selectedFillLayerId, handleClick);
+      map.off('click', selectedLineLayerId, handleClick);
+      map.off('mouseenter', fillLayerId, handleMouseEnter);
+      map.off('mouseenter', lineLayerId, handleMouseEnter);
+      map.off('mouseleave', fillLayerId, handleMouseLeave);
+      map.off('mouseleave', lineLayerId, handleMouseLeave);
+      try {
+        if (map.getLayer(selectedLineLayerId)) map.removeLayer(selectedLineLayerId);
+        if (map.getLayer(selectedFillLayerId)) map.removeLayer(selectedFillLayerId);
+        if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId);
+        if (map.getLayer(fillLayerId)) map.removeLayer(fillLayerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+      } catch {}
+    };
+  }, [siteObjects, selectedObjectId, selectObject, mapReadyTick]);
 
   useEffect(() => {
     const { areaSqM, lengthM } = committedMetricsRef.current
