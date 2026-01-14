@@ -124,7 +124,7 @@ function PageCard({
           <CategoryBadge category={page.category} />
           {page.scale_info && (
             <span className="text-xs text-gray-500">
-              {page.scale_info.scale}
+              {page.scale_info.ratio}
             </span>
           )}
         </div>
