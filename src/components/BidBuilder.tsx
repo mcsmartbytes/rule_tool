@@ -288,7 +288,7 @@ export default function BidBuilder({ onClose }: BidBuilderProps) {
 
             {bid.lineItems.length === 0 ? (
               <div className="bid-empty-items">
-                Click "Add Service" to start building your quote
+                Click “Add Service” to start building your quote
               </div>
             ) : (
               <div className="bid-items-list">

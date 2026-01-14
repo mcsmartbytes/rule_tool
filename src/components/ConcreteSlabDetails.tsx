@@ -146,7 +146,7 @@ export default function ConcreteSlabDetails({ onClose }: Props) {
         >
           {THICKNESS_OPTIONS.map((t) => (
             <option key={t} value={t}>
-              {t}"
+              {t}″
             </option>
           ))}
         </select>
@@ -262,7 +262,7 @@ export default function ConcreteSlabDetails({ onClose }: Props) {
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span style={{ color: "var(--muted)" }}>Thickness:</span>
-          <span>{slab.thickness_in}"</span>
+          <span>{slab.thickness_in}″</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span style={{ color: "var(--muted)" }}>Volume:</span>

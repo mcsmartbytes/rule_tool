@@ -112,7 +112,7 @@ export default function ConcreteMeasurementsList({ onClose, onZoomTo }: Props) {
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>{slab.label}</div>
                           <div style={{ fontSize: 11, color: "var(--muted)" }}>
-                            {slab.area_sqft.toLocaleString()} sqft &middot; {slab.thickness_in}" &middot;{" "}
+                            {slab.area_sqft.toLocaleString()} sqft &middot; {slab.thickness_in}″ &middot;{" "}
                             {FINISH_LABELS[slab.finish]}
                           </div>
                           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
