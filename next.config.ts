@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   experimental: {
     // Keep native/node-only deps out of the Turbopack server bundle
     // (used by the PDF processing route).
-    serverExternalPackages: ['@napi-rs/canvas', 'sharp', 'pdfjs-dist'],
+    serverComponentsExternalPackages: ['@napi-rs/canvas', 'sharp', 'pdfjs-dist'],
   },
 }
 
