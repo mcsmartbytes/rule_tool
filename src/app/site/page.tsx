@@ -18,6 +18,20 @@ import { AIDetectionButton } from '@/components/AIDetectionButton';
 import { AIReviewPanel } from '@/components/AIReviewPanel';
 import type { AIDetectedFeature } from '@/lib/ai/types';
 
+// Blueprint overlay data structure
+export interface BlueprintOverlay {
+  pageId: string;
+  documentId: string;
+  imageUrl: string;
+  pageNumber: number;
+  width: number;
+  height: number;
+  category: string | null;
+  // Position on map (corners: [topLeft, topRight, bottomRight, bottomLeft] as [lng, lat])
+  corners?: [[number, number], [number, number], [number, number], [number, number]];
+  opacity?: number;
+}
+
 function SitePageInner() {
   const mounted = useMounted();
   const searchParams = useSearchParams();
@@ -31,6 +45,10 @@ function SitePageInner() {
   const [highlightedAIFeatureId, setHighlightedAIFeatureId] = useState<string | null>(null);
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const mapCaptureRef = useRef<(() => Promise<MapCaptureResult | null>) | null>(null);
+
+  // Blueprint overlay state
+  const [blueprintOverlay, setBlueprintOverlay] = useState<BlueprintOverlay | null>(null);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.7);
 
   const site = useSiteStore((s) => s.site);
   const setSite = useSiteStore((s) => s.setSite);
@@ -191,6 +209,34 @@ function SitePageInner() {
     }
   }, [mounted, searchParams, site, setSite]);
 
+  // Load blueprint overlay from sessionStorage when mode=overlay
+  useEffect(() => {
+    if (!mounted) return;
+
+    const mode = searchParams?.get('mode');
+    if (mode === 'overlay') {
+      try {
+        const stored = sessionStorage.getItem('blueprintOverlay');
+        if (stored) {
+          const overlayData = JSON.parse(stored);
+          setBlueprintOverlay({
+            ...overlayData,
+            opacity: overlayOpacity,
+          });
+          // Clear from sessionStorage after loading
+          sessionStorage.removeItem('blueprintOverlay');
+        }
+      } catch (err) {
+        console.error('Failed to load blueprint overlay:', err);
+      }
+    }
+  }, [mounted, searchParams, overlayOpacity]);
+
+  // Handler to clear the overlay
+  const handleClearOverlay = useCallback(() => {
+    setBlueprintOverlay(null);
+  }, []);
+
   // Geocode address and focus map
   useEffect(() => {
     if (!siteAddress || lastAddressRef.current === siteAddress) return;
@@ -318,6 +364,7 @@ function SitePageInner() {
               aiFeatures={aiFeatures}
               highlightedAIFeatureId={highlightedAIFeatureId}
               captureRef={mapCaptureRef}
+              blueprintOverlay={blueprintOverlay}
             />
           </ErrorBoundary>
 
@@ -335,6 +382,47 @@ function SitePageInner() {
               onClose={handleCloseReviewPanel}
               onHover={setHighlightedAIFeatureId}
             />
+          )}
+
+          {/* Blueprint Overlay Controls */}
+          {blueprintOverlay && (
+            <div className="blueprint-overlay-controls">
+              <div className="overlay-controls-header">
+                <span className="overlay-controls-title">Blueprint Overlay</span>
+                <button
+                  onClick={handleClearOverlay}
+                  className="overlay-close-btn"
+                  title="Remove overlay"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="overlay-controls-body">
+                <div className="overlay-info">
+                  <span>Page {blueprintOverlay.pageNumber}</span>
+                </div>
+                <div className="overlay-opacity-control">
+                  <label>Opacity</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={overlayOpacity * 100}
+                    onChange={(e) => {
+                      const newOpacity = parseInt(e.target.value) / 100;
+                      setOverlayOpacity(newOpacity);
+                      setBlueprintOverlay((prev) => prev ? { ...prev, opacity: newOpacity } : null);
+                    }}
+                  />
+                  <span>{Math.round(overlayOpacity * 100)}%</span>
+                </div>
+                <p className="overlay-hint">
+                  Position the map where you want to trace features from this blueprint.
+                </p>
+              </div>
+            </div>
           )}
         </main>
 

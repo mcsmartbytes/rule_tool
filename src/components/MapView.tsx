@@ -26,11 +26,25 @@ export interface MapCaptureResult {
   height: number;
 }
 
+// Blueprint overlay data structure
+export interface BlueprintOverlay {
+  pageId: string;
+  documentId: string;
+  imageUrl: string;
+  pageNumber: number;
+  width: number;
+  height: number;
+  category: string | null;
+  corners?: [[number, number], [number, number], [number, number], [number, number]];
+  opacity?: number;
+}
+
 interface MapViewProps {
   onGeometryCreate?: (geometry: GeoJSON.Geometry, featureId: string) => void;
   aiFeatures?: AIDetectedFeature[];
   highlightedAIFeatureId?: string | null;
   captureRef?: React.MutableRefObject<(() => Promise<MapCaptureResult | null>) | null>;
+  blueprintOverlay?: BlueprintOverlay | null;
 }
 
 export default function MapView({
@@ -38,6 +52,7 @@ export default function MapView({
   aiFeatures = [],
   highlightedAIFeatureId,
   captureRef,
+  blueprintOverlay,
 }: MapViewProps = {}) {
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const drawRef = useRef<MapboxDraw | null>(null)
@@ -1712,6 +1727,36 @@ export default function MapView({
       <div className="map-container">
         <div ref={containerRef} className="map-canvas" />
       </div>
+      {/* Blueprint Overlay Image */}
+      {blueprintOverlay?.imageUrl && (
+        <div
+          className="blueprint-overlay-image"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          <img
+            src={blueprintOverlay.imageUrl}
+            alt={`Blueprint page ${blueprintOverlay.pageNumber}`}
+            style={{
+              maxWidth: '90%',
+              maxHeight: '90%',
+              objectFit: 'contain',
+              opacity: blueprintOverlay.opacity ?? 0.7,
+              filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))',
+              border: '2px solid rgba(255,255,255,0.5)',
+              borderRadius: '4px',
+            }}
+          />
+        </div>
+      )}
       {mounted && createPortal(modals, document.body)}
     </>
   )

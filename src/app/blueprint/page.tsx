@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useBlueprintStore } from '@/lib/blueprint/store';
 import type { PDFDocument, PDFPageCategory } from '@/lib/supabase/types';
 
@@ -173,6 +174,7 @@ function UploadDropzone({ onUpload, isUploading, progress }: {
 
 export default function BlueprintPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   const documents = useBlueprintStore((s) => s.documents);
   const setDocuments = useBlueprintStore((s) => s.setDocuments);
@@ -246,22 +248,21 @@ export default function BlueprintPage() {
 
   const handleSelectDocument = useCallback((doc: PDFDocument) => {
     setActiveDocument(doc.id);
-    // TODO: Navigate to document detail page
-    // router.push(`/blueprint/${doc.id}`);
-  }, [setActiveDocument]);
+    router.push(`/blueprint/${doc.id}`);
+  }, [setActiveDocument, router]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-500">Loading blueprints...</div>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#f9fafb' }}>
+        <div className="text-gray-600">Loading blueprints...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50" style={{ background: '#f9fafb' }}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Blueprints</h1>
