@@ -16,6 +16,7 @@ import { useQuoteStore } from '@/lib/quote/store';
 import { getDefaultTrades, getServices } from '@/lib/supabase';
 import { AIDetectionButton } from '@/components/AIDetectionButton';
 import { AIReviewPanel } from '@/components/AIReviewPanel';
+import { BlueprintOverlayModal } from '@/components/BlueprintOverlayModal';
 import type { AIDetectedFeature } from '@/lib/ai/types';
 
 function SitePageInner() {
@@ -31,6 +32,10 @@ function SitePageInner() {
   const [highlightedAIFeatureId, setHighlightedAIFeatureId] = useState<string | null>(null);
   const [showReviewPanel, setShowReviewPanel] = useState(false);
   const mapCaptureRef = useRef<(() => Promise<MapCaptureResult | null>) | null>(null);
+  const [showBlueprintOverlayModal, setShowBlueprintOverlayModal] = useState(false);
+  const [placingBlueprint, setPlacingBlueprint] = useState<null | { pageId: string; imageUrl: string; label: string }>(null);
+  const [blueprintCorners, setBlueprintCorners] = useState<Array<[number, number]>>([]);
+  const [blueprintOverlay, setBlueprintOverlay] = useState<null | { id: string; imageUrl: string; corners: Array<[number, number]> }>(null);
 
   const site = useSiteStore((s) => s.site);
   const setSite = useSiteStore((s) => s.setSite);
@@ -61,6 +66,28 @@ function SitePageInner() {
   const handleCaptureRequest = useCallback(async () => {
     if (!mapCaptureRef.current) return null;
     return await mapCaptureRef.current();
+  }, []);
+
+  const handleMapClick = useCallback((lng: number, lat: number) => {
+    if (!placingBlueprint) return;
+    setBlueprintCorners((prev) => {
+      if (prev.length >= 4) return prev;
+      const next = [...prev, [lng, lat] as [number, number]];
+      if (next.length === 4) {
+        setBlueprintOverlay({
+          id: placingBlueprint.pageId,
+          imageUrl: placingBlueprint.imageUrl,
+          corners: next,
+        });
+        setPlacingBlueprint(null);
+      }
+      return next;
+    });
+  }, [placingBlueprint]);
+
+  const cancelBlueprintPlacement = useCallback(() => {
+    setPlacingBlueprint(null);
+    setBlueprintCorners([]);
   }, []);
 
   const handleDetectionComplete = useCallback((features: AIDetectedFeature[]) => {
@@ -290,6 +317,22 @@ function SitePageInner() {
         <div className="site-header-right">
           <Link href="/dashboard" className="btn btn-secondary btn-sm">Dashboard</Link>
           <Link href="/blueprint" className="btn btn-secondary btn-sm">Blueprints</Link>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => setShowBlueprintOverlayModal(true)}
+            title="Select a blueprint page and place it on the map"
+          >
+            Blueprint Overlay
+          </button>
+          {blueprintOverlay && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setBlueprintOverlay(null)}
+              title="Remove blueprint overlay"
+            >
+              Clear Overlay
+            </button>
+          )}
           <AIDetectionButton
             onCaptureRequest={handleCaptureRequest}
             onDetectionComplete={handleDetectionComplete}
@@ -318,8 +361,26 @@ function SitePageInner() {
               aiFeatures={aiFeatures}
               highlightedAIFeatureId={highlightedAIFeatureId}
               captureRef={mapCaptureRef}
+              onMapClick={placingBlueprint ? handleMapClick : undefined}
+              blueprintOverlay={blueprintOverlay ? { ...blueprintOverlay, opacity: 0.6 } : null}
             />
           </ErrorBoundary>
+
+          {placingBlueprint && (
+            <div className="map-hint" style={{ top: 12, left: 12, right: 'auto', background: 'rgba(17,24,39,0.9)' }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>Placing: {placingBlueprint.label}</div>
+              <div style={{ fontSize: 12, opacity: 0.9 }}>
+                Click 4 corners on the map: <strong>top-left → top-right → bottom-right → bottom-left</strong>
+              </div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>
+                Corner {Math.min(blueprintCorners.length + 1, 4)} / 4
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => setBlueprintCorners([])}>Restart</button>
+                <button className="btn btn-secondary btn-sm" onClick={cancelBlueprintPlacement}>Cancel</button>
+              </div>
+            </div>
+          )}
 
           {/* Drawing toolbar hint */}
           <div className="map-hint">
@@ -348,6 +409,16 @@ function SitePageInner() {
 
       {/* Object Classifier Modal */}
       <ObjectClassifier />
+
+      <BlueprintOverlayModal
+        open={showBlueprintOverlayModal}
+        onClose={() => setShowBlueprintOverlayModal(false)}
+        onSelectPage={(page) => {
+          setBlueprintCorners([]);
+          setBlueprintOverlay(null);
+          setPlacingBlueprint(page);
+        }}
+      />
     </div>
   );
 }

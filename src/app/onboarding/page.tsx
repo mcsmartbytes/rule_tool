@@ -60,7 +60,7 @@ function OnboardingContent() {
       <div className="onboarding-card">
         <div className="quote-entry-label">Welcome to Area Bid Helper</div>
         <h1>Choose your industry</h1>
-        <p className="onboarding-subtitle">We'll preload the tools, services, and rates for your trade. You can change this anytime.</p>
+        <p className="onboarding-subtitle">We&apos;ll preload the tools, services, and rates for your trade. You can change this anytime.</p>
         <div className="industry-grid">
           {industryOptions.map((industry) => {
             const colors = industry.fullConfig.branding

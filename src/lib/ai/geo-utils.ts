@@ -49,7 +49,7 @@ export function convertGeometry(
   bounds: MapBounds
 ): GeoJSON.Geometry {
   if (rawGeometry.type === 'Point') {
-    const coords = rawGeometry.coordinates as number[];
+    const coords = rawGeometry.coordinates as unknown as number[];
     const [lng, lat] = pixelToGeo(coords[0], coords[1], imageWidth, imageHeight, bounds);
     return {
       type: 'Point',
@@ -58,7 +58,7 @@ export function convertGeometry(
   }
 
   if (rawGeometry.type === 'LineString') {
-    const pixelCoords = rawGeometry.coordinates as number[][];
+    const pixelCoords = rawGeometry.coordinates as unknown as number[][];
     return {
       type: 'LineString',
       coordinates: pixelCoordsToGeo(pixelCoords, imageWidth, imageHeight, bounds),
@@ -66,7 +66,7 @@ export function convertGeometry(
   }
 
   if (rawGeometry.type === 'Polygon') {
-    const rings = rawGeometry.coordinates as number[][][];
+    const rings = rawGeometry.coordinates as unknown as number[][][];
     return {
       type: 'Polygon',
       coordinates: rings.map(ring =>
@@ -147,12 +147,12 @@ export function getPixelBounds(geometry: RawAIFeature['geometry']): {
   let allCoords: number[][] = [];
 
   if (geometry.type === 'Point') {
-    const c = geometry.coordinates as number[];
+    const c = geometry.coordinates as unknown as number[];
     allCoords = [[c[0], c[1]]];
   } else if (geometry.type === 'LineString') {
-    allCoords = geometry.coordinates as number[][];
+    allCoords = geometry.coordinates as unknown as number[][];
   } else if (geometry.type === 'Polygon') {
-    const rings = geometry.coordinates as number[][][];
+    const rings = geometry.coordinates as unknown as number[][][];
     allCoords = rings.flat();
   }
 

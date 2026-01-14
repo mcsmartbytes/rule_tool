@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useBlueprintStore } from '@/lib/blueprint/store';
 import type { PDFDocument, PDFPageCategory } from '@/lib/supabase/types';
 
@@ -173,6 +174,8 @@ function UploadDropzone({ onUpload, isUploading, progress }: {
 
 export default function BlueprintPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const router = useRouter();
 
   const documents = useBlueprintStore((s) => s.documents);
   const setDocuments = useBlueprintStore((s) => s.setDocuments);
@@ -186,13 +189,17 @@ export default function BlueprintPage() {
   useEffect(() => {
     async function fetchDocuments() {
       try {
+        setLoadError(null);
         const response = await fetch('/api/pdf/upload');
         const data = await response.json();
         if (data.success) {
           setDocuments(data.documents);
+        } else {
+          setLoadError(data.error || 'Failed to load documents');
         }
       } catch (error) {
         console.error('Failed to fetch documents:', error);
+        setLoadError('Failed to load documents');
       } finally {
         setIsLoading(false);
       }
@@ -236,6 +243,7 @@ export default function BlueprintPage() {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
+        router.push(`/blueprint/${data.document.id}`);
       }
     } catch (error) {
       console.error('Upload failed:', error);
@@ -246,9 +254,8 @@ export default function BlueprintPage() {
 
   const handleSelectDocument = useCallback((doc: PDFDocument) => {
     setActiveDocument(doc.id);
-    // TODO: Navigate to document detail page
-    // router.push(`/blueprint/${doc.id}`);
-  }, [setActiveDocument]);
+    router.push(`/blueprint/${doc.id}`);
+  }, [router, setActiveDocument]);
 
   if (isLoading) {
     return (
@@ -285,6 +292,11 @@ export default function BlueprintPage() {
       </header>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
+        {loadError && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">
+            {loadError}
+          </div>
+        )}
         {/* Upload Section */}
         <div className="mb-8">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Upload New Blueprint</h2>

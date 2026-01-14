@@ -1,17 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client with service role for storage operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export const runtime = 'nodejs';
+
+function getServiceSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error('Missing Supabase env vars (NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)');
+  }
+
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const ALLOWED_TYPES = ['application/pdf'];
+const STORAGE_BUCKET = 'pdf-documents';
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getServiceSupabase();
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const organizationId = formData.get('organizationId') as string | null;
@@ -47,7 +58,7 @@ export async function POST(request: NextRequest) {
     // Upload to Supabase Storage
     const arrayBuffer = await file.arrayBuffer();
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('pdf-documents')
+      .from(STORAGE_BUCKET)
       .upload(storagePath, arrayBuffer, {
         contentType: 'application/pdf',
         upsert: false,
@@ -82,16 +93,15 @@ export async function POST(request: NextRequest) {
     if (dbError) {
       console.error('Database error:', dbError);
       // Clean up uploaded file
-      await supabase.storage.from('pdf-documents').remove([storagePath]);
+      await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
       return NextResponse.json(
         { error: 'Failed to create document record' },
         { status: 500 }
       );
     }
 
-    // TODO: Trigger background job to extract pages
-    // For now, we'll handle page extraction in a separate endpoint
-    // or could use Supabase Edge Functions
+    // NOTE: Page rendering is done via POST /api/pdf/process.
+    // (Serverless deploys generally can't spawn detached worker processes reliably.)
 
     return NextResponse.json({
       success: true,
@@ -106,8 +116,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Upload error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: message },
       { status: 500 }
     );
   }
@@ -116,6 +127,7 @@ export async function POST(request: NextRequest) {
 // GET: List documents for organization
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getServiceSupabase();
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
 
@@ -145,8 +157,9 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Fetch error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: message },
       { status: 500 }
     );
   }
