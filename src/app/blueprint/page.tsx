@@ -4,85 +4,55 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useBlueprintStore } from '@/lib/blueprint/store';
-import type { PDFDocument, PDFPageCategory } from '@/lib/supabase/types';
-
-// Category badge component
-function CategoryBadge({ category }: { category: PDFPageCategory | null }) {
-  if (!category) return null;
-
-  const colors: Record<PDFPageCategory, string> = {
-    'site-plan': 'bg-green-100 text-green-700',
-    'floor-plan': 'bg-blue-100 text-blue-700',
-    'electrical': 'bg-yellow-100 text-yellow-700',
-    'mechanical': 'bg-orange-100 text-orange-700',
-    'plumbing': 'bg-cyan-100 text-cyan-700',
-    'structural': 'bg-purple-100 text-purple-700',
-    'landscape': 'bg-emerald-100 text-emerald-700',
-    'civil': 'bg-gray-100 text-gray-700',
-    'detail': 'bg-pink-100 text-pink-700',
-    'schedule': 'bg-indigo-100 text-indigo-700',
-    'cover': 'bg-slate-100 text-slate-700',
-    'other': 'bg-gray-100 text-gray-500',
-  };
-
-  const labels: Record<PDFPageCategory, string> = {
-    'site-plan': 'Site Plan',
-    'floor-plan': 'Floor Plan',
-    'electrical': 'Electrical',
-    'mechanical': 'Mechanical',
-    'plumbing': 'Plumbing',
-    'structural': 'Structural',
-    'landscape': 'Landscape',
-    'civil': 'Civil',
-    'detail': 'Detail',
-    'schedule': 'Schedule',
-    'cover': 'Cover',
-    'other': 'Other',
-  };
-
-  return (
-    <span className={`px-2 py-0.5 text-xs font-medium rounded ${colors[category]}`}>
-      {labels[category]}
-    </span>
-  );
-}
+import type { PDFDocument } from '@/lib/supabase/types';
 
 // Document card
 function DocumentCard({ doc, onSelect }: { doc: PDFDocument; onSelect: () => void }) {
   return (
     <div
       onClick={onSelect}
-      className="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all"
+      style={{
+        background: 'white',
+        borderRadius: '8px',
+        border: '1px solid #e5e7eb',
+        padding: '16px',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+      }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.borderColor = '#93c5fd';
+        e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)';
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.borderColor = '#e5e7eb';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
     >
-      <div className="flex items-start gap-3">
-        <div className="p-2 bg-red-100 rounded-lg">
-          <svg className="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+        <div style={{ padding: '8px', background: '#fee2e2', borderRadius: '8px' }}>
+          <svg style={{ width: '32px', height: '32px', color: '#dc2626' }} fill="currentColor" viewBox="0 0 24 24">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zm-3 9h4v2h-4v-2zm0 4h4v2h-4v-2zm-2-4h.01v2H8v-2zm0 4h.01v2H8v-2z"/>
           </svg>
         </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-gray-900 truncate">{doc.name}</h3>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-sm text-gray-500">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{doc.name}</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+            <span style={{ fontSize: '14px', color: '#6b7280' }}>
               {doc.page_count ? `${doc.page_count} pages` : 'Processing...'}
             </span>
             {doc.status === 'processing' && (
-              <span className="flex items-center gap-1 text-xs text-blue-600">
-                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#2563eb' }}>
                 Processing
               </span>
             )}
             {doc.status === 'ready' && (
-              <span className="text-xs text-green-600">Ready</span>
+              <span style={{ fontSize: '12px', color: '#16a34a' }}>Ready</span>
             )}
             {doc.status === 'error' && (
-              <span className="text-xs text-red-600">Error</span>
+              <span style={{ fontSize: '12px', color: '#dc2626' }}>Error</span>
             )}
           </div>
-          <p className="text-xs text-gray-400 mt-1">
+          <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
             {new Date(doc.created_at).toLocaleDateString()}
           </p>
         </div>
@@ -103,7 +73,6 @@ function UploadDropzone({ onUpload, isUploading, progress }: {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-
     const file = e.dataTransfer.files[0];
     if (file && file.type === 'application/pdf') {
       onUpload(file);
@@ -132,40 +101,51 @@ function UploadDropzone({ onUpload, isUploading, progress }: {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onClick={() => inputRef.current?.click()}
-      className={`
-        border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
-        ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
-        ${isUploading ? 'pointer-events-none opacity-50' : ''}
-      `}
+      style={{
+        border: `2px dashed ${isDragging ? '#3b82f6' : '#d1d5db'}`,
+        borderRadius: '12px',
+        padding: '32px',
+        textAlign: 'center',
+        cursor: 'pointer',
+        background: isDragging ? '#eff6ff' : 'white',
+        transition: 'all 0.2s',
+        opacity: isUploading ? 0.5 : 1,
+        pointerEvents: isUploading ? 'none' : 'auto',
+      }}
     >
       <input
         ref={inputRef}
         type="file"
         accept=".pdf"
         onChange={handleFileSelect}
-        className="hidden"
+        style={{ display: 'none' }}
       />
 
       {isUploading ? (
-        <div className="space-y-3">
-          <div className="w-12 h-12 mx-auto border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-600">Uploading... {progress}%</p>
-          <div className="w-48 mx-auto h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-500 transition-all"
-              style={{ width: `${progress}%` }}
-            />
+        <div>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            margin: '0 auto 12px',
+            border: '4px solid #3b82f6',
+            borderTopColor: 'transparent',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+          }} />
+          <p style={{ color: '#4b5563' }}>Uploading... {progress}%</p>
+          <div style={{ width: '200px', margin: '12px auto 0', height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', background: '#3b82f6', width: `${progress}%`, transition: 'width 0.2s' }} />
           </div>
         </div>
       ) : (
         <>
-          <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg style={{ width: '48px', height: '48px', margin: '0 auto 16px', color: '#9ca3af' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          <p className="text-gray-600 mb-2">
-            <span className="font-medium text-blue-600">Click to upload</span> or drag and drop
+          <p style={{ color: '#4b5563', marginBottom: '8px' }}>
+            <span style={{ fontWeight: 500, color: '#2563eb' }}>Click to upload</span> or drag and drop
           </p>
-          <p className="text-sm text-gray-400">PDF files up to 100MB</p>
+          <p style={{ fontSize: '14px', color: '#9ca3af' }}>PDF files up to 100MB</p>
         </>
       )}
     </div>
@@ -209,7 +189,6 @@ export default function BlueprintPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      // Simulate progress (real progress would need XMLHttpRequest)
       const progressInterval = setInterval(() => {
         setUploading(true, Math.min(uploadProgress + 10, 90));
       }, 200);
@@ -253,31 +232,45 @@ export default function BlueprintPage() {
 
   if (isLoading) {
     return (
-      <div className="light-theme min-h-screen flex items-center justify-center">
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
         <div style={{ color: '#4b5563' }}>Loading blueprints...</div>
       </div>
     );
   }
 
   return (
-    <div className="light-theme min-h-screen">
+    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       {/* Header */}
       <header style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '16px 24px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-        <div className="flex items-center justify-between">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Blueprints</h1>
-            <p className="text-sm text-gray-500">Upload and analyze PDF plans</p>
+            <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#111827', margin: 0 }}>Blueprints</h1>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0' }}>Upload and analyze PDF plans</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Link
               href="/dashboard"
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              style={{
+                padding: '8px 16px',
+                border: '1px solid #d1d5db',
+                color: '#374151',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontSize: '14px',
+              }}
             >
               Dashboard
             </Link>
             <Link
               href="/site"
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              style={{
+                padding: '8px 16px',
+                border: '1px solid #d1d5db',
+                color: '#374151',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontSize: '14px',
+              }}
             >
               Site Estimator
             </Link>
@@ -285,10 +278,10 @@ export default function BlueprintPage() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
         {/* Upload Section */}
-        <div className="mb-8">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Upload New Blueprint</h2>
+        <div style={{ marginBottom: '32px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 500, color: '#111827', marginBottom: '16px' }}>Upload New Blueprint</h2>
           <UploadDropzone
             onUpload={handleUpload}
             isUploading={isUploading}
@@ -298,32 +291,22 @@ export default function BlueprintPage() {
 
         {/* Documents Grid */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-gray-900">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 500, color: '#111827', margin: 0 }}>
               Your Documents ({documents.length})
             </h2>
-            {documents.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Sort by:</span>
-                <select className="text-sm border border-gray-300 rounded px-2 py-1">
-                  <option>Newest first</option>
-                  <option>Oldest first</option>
-                  <option>Name A-Z</option>
-                </select>
-              </div>
-            )}
           </div>
 
           {documents.length === 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-              <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div style={{ background: 'white', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '48px', textAlign: 'center' }}>
+              <svg style={{ width: '64px', height: '64px', margin: '0 auto 16px', color: '#d1d5db' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No documents yet</h3>
-              <p className="text-gray-500 mb-4">Upload a PDF blueprint to get started</p>
+              <h3 style={{ fontSize: '18px', fontWeight: 500, color: '#111827', marginBottom: '8px' }}>No documents yet</h3>
+              <p style={{ color: '#6b7280' }}>Upload a PDF blueprint to get started</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
               {documents.map((doc) => (
                 <DocumentCard
                   key={doc.id}
@@ -334,34 +317,14 @@ export default function BlueprintPage() {
             </div>
           )}
         </div>
-
-        {/* How it works */}
-        <div className="mt-12 bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">How it works</h3>
-          <div className="grid md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mb-3">1</div>
-              <h4 className="font-medium text-gray-900 mb-1">Upload PDF</h4>
-              <p className="text-sm text-gray-500">Upload your blueprint or construction drawings</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mb-3">2</div>
-              <h4 className="font-medium text-gray-900 mb-1">AI Categorizes</h4>
-              <p className="text-sm text-gray-500">AI identifies page types: site plans, floor plans, details</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mb-3">3</div>
-              <h4 className="font-medium text-gray-900 mb-1">Select & Analyze</h4>
-              <p className="text-sm text-gray-500">Choose pages for detailed feature extraction</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mb-3">4</div>
-              <h4 className="font-medium text-gray-900 mb-1">Generate Estimates</h4>
-              <p className="text-sm text-gray-500">Approve features and create site estimates</p>
-            </div>
-          </div>
-        </div>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
