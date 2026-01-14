@@ -213,7 +213,7 @@ export async function getTradeEstimates(siteId: string) {
 export async function saveTradeEstimate(estimate: TradeEstimateInsert) {
   const { data, error } = await supabase
     .from('trade_estimates')
-    .upsert(estimate, { onConflict: 'site_id,trade_id' })
+    .upsert(estimate as never, { onConflict: 'site_id,trade_id' })
     .select()
     .single();
 
