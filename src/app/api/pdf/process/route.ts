@@ -95,7 +95,6 @@ export async function POST(request: NextRequest) {
 
     const task = pdfjs.getDocument({
       data: new Uint8Array(pdfBuffer),
-      disableWorker: true,
     });
     const pdf = await task.promise;
 
