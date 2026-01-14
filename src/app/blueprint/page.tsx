@@ -253,16 +253,16 @@ export default function BlueprintPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#f9fafb' }}>
-        <div className="text-gray-600">Loading blueprints...</div>
+      <div className="light-theme min-h-screen flex items-center justify-center">
+        <div style={{ color: '#4b5563' }}>Loading blueprints...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ background: '#f9fafb' }}>
+    <div className="light-theme min-h-screen">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+      <header style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '16px 24px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Blueprints</h1>

@@ -341,10 +341,10 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#f9fafb' }}>
+      <div className="light-theme min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 mx-auto border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
-          <div className="text-gray-600">Loading document...</div>
+          <div style={{ color: '#4b5563' }}>Loading document...</div>
         </div>
       </div>
     );
@@ -352,10 +352,10 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#f9fafb' }}>
+      <div className="light-theme min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">{error || 'Document not found'}</div>
-          <Link href="/blueprint" className="text-blue-600 hover:underline">
+          <div style={{ color: '#ef4444', fontSize: '1.25rem', marginBottom: '1rem' }}>{error || 'Document not found'}</div>
+          <Link href="/blueprint" style={{ color: '#2563eb' }}>
             Back to Blueprints
           </Link>
         </div>
@@ -367,9 +367,9 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
   const selectedCount = [...selectedPageIds].filter((id) => pages.some((p) => p.id === id)).length;
 
   return (
-    <div className="min-h-screen" style={{ background: '#f9fafb' }}>
+    <div className="light-theme min-h-screen">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm sticky top-0 z-10">
+      <header style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '16px 24px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 10 }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link

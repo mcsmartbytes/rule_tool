@@ -2880,6 +2880,21 @@ select option {
   font-size: 11px;
 }
 
+/* Light Theme Override (for pages that need light background) */
+.light-theme {
+  --bg: #f9fafb;
+  --fg: #111827;
+  --muted: #6b7280;
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  background: #f9fafb !important;
+  color: #111827 !important;
+}
+
+.light-theme * {
+  color: inherit;
+}
+
 /* Blueprint Overlay Controls */
 .blueprint-overlay-controls {
   position: absolute;
