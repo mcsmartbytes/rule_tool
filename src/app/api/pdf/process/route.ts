@@ -130,9 +130,9 @@ export async function POST(request: NextRequest) {
       const viewport = page.getViewport({ scale: RENDER_SCALE });
 
       const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d') as any;
 
-      await page.render({ canvasContext: ctx, viewport, intent: 'display' }).promise;
+      await page.render({ canvasContext: ctx as any, viewport, intent: 'display' } as any).promise;
 
       const pngBuffer = canvas.toBuffer('image/png');
       const thumbBuffer = await sharp(pngBuffer)
