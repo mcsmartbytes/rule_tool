@@ -116,8 +116,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Upload error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: message },
       { status: 500 }
     );
   }
@@ -156,8 +157,9 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Fetch error:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: message },
       { status: 500 }
     );
   }

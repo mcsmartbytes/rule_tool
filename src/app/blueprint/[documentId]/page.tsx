@@ -48,6 +48,7 @@ export default function BlueprintDocumentPage() {
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCategorizing, setIsCategorizing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const activePage = useMemo(
     () => pages.find((p) => p.id === activePageId) || pages[0] || null,
@@ -116,6 +117,29 @@ export default function BlueprintDocumentPage() {
       fetchDoc();
     }
   }, [documentId, fetchDoc]);
+
+  const analyzeActivePage = useCallback(async () => {
+    if (!activePage?.id) return;
+    setIsAnalyzing(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/blueprint/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId: activePage.id }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to analyze page');
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to analyze page';
+      setError(msg);
+    } finally {
+      setIsAnalyzing(false);
+      fetchDoc();
+    }
+  }, [activePage?.id, fetchDoc]);
 
   // Initial load + polling while processing
   useEffect(() => {
@@ -202,6 +226,14 @@ export default function BlueprintDocumentPage() {
               {isCategorizing ? 'Categorizing…' : 'Categorize pages'}
             </button>
             <button
+              onClick={analyzeActivePage}
+              disabled={isAnalyzing || !activePage?.id || pages.length === 0}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+              title="Extract features from the selected page (writes blueprint_features)"
+            >
+              {isAnalyzing ? 'Analyzing…' : 'Analyze page'}
+            </button>
+            <button
               onClick={startProcessing}
               disabled={isProcessing || doc?.status === 'processing'}
               className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm disabled:opacity-50"
@@ -239,6 +271,11 @@ export default function BlueprintDocumentPage() {
                     {typeof activePage.category_confidence === 'number'
                       ? ` (${Math.round(activePage.category_confidence * 100)}%)`
                       : ''}
+                  </div>
+                )}
+                {activePage?.ai_analyzed && (
+                  <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded">
+                    Analyzed
                   </div>
                 )}
               </div>
