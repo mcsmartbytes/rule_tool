@@ -8,10 +8,18 @@ let pdfjsLib: any = null;
 async function getPdfjs() {
   if (!pdfjsLib) {
     pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    // Disable worker for serverless environments (Vercel)
     pdfjsLib.GlobalWorkerOptions.workerSrc = '';
   }
   return pdfjsLib;
 }
+
+// Common options for loading PDFs in serverless environment
+const PDF_LOAD_OPTIONS = {
+  useSystemFonts: true,
+  isEvalSupported: false,
+  disableFontFace: true,
+};
 
 export interface ProcessedPage {
   pageNumber: number;
@@ -49,10 +57,10 @@ export async function processPDF(pdfBuffer: Buffer | ArrayBuffer): Promise<PDFPr
     ? new Uint8Array(pdfBuffer)
     : new Uint8Array(pdfBuffer);
 
-  // Load the PDF document
+  // Load the PDF document (with serverless-compatible options)
   const loadingTask = pdfjs.getDocument({
     data,
-    useSystemFonts: true,
+    ...PDF_LOAD_OPTIONS,
   });
 
   const pdfDoc = await loadingTask.promise;
@@ -149,7 +157,7 @@ export async function processSinglePage(
 
   const loadingTask = pdfjs.getDocument({
     data,
-    useSystemFonts: true,
+    ...PDF_LOAD_OPTIONS,
   });
 
   const pdfDoc = await loadingTask.promise;
@@ -174,7 +182,7 @@ export async function getPDFPageCount(pdfBuffer: Buffer | ArrayBuffer): Promise<
 
   const loadingTask = pdfjs.getDocument({
     data,
-    useSystemFonts: true,
+    ...PDF_LOAD_OPTIONS,
   });
 
   const pdfDoc = await loadingTask.promise;
