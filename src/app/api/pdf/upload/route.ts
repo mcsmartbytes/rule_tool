@@ -5,11 +5,18 @@ import path from 'node:path';
 
 export const runtime = 'nodejs';
 
-// Initialize Supabase client with service role for storage operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+function getServiceSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error('Missing Supabase env vars (NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)');
+  }
+
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const ALLOWED_TYPES = ['application/pdf'];
@@ -30,6 +37,7 @@ function startWorker(documentId: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getServiceSupabase();
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const organizationId = formData.get('organizationId') as string | null;
@@ -137,6 +145,7 @@ export async function POST(request: NextRequest) {
 // GET: List documents for organization
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getServiceSupabase();
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
 

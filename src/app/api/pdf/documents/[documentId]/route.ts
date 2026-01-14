@@ -28,10 +28,10 @@ async function signPath(supabase: ReturnType<typeof getServiceSupabase>, path: s
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
-    const { documentId } = params;
+    const { documentId } = await params;
     const supabase = getServiceSupabase();
 
     const { data: document, error: docError } = await supabase

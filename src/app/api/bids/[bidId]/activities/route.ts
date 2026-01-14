@@ -2,10 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { BidActivityInsert } from '@/lib/supabase/types';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export const runtime = 'nodejs';
+
+function getServiceSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error('Missing Supabase env vars (NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)');
+  }
+
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 interface RouteParams {
   params: Promise<{ bidId: string }>;
@@ -14,6 +24,7 @@ interface RouteParams {
 // GET: List activities for a bid
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabase = getServiceSupabase();
     const { bidId } = await params;
 
     const { data: activities, error } = await supabase
@@ -47,6 +58,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // POST: Create new activity
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    const supabase = getServiceSupabase();
     const { bidId } = await params;
     const body = await request.json();
 

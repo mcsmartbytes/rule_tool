@@ -136,16 +136,18 @@ function calculateObjectCosts(
         quantity = quantity * wasteFactor;
       }
 
-      // Get rates from service
-      const laborRate = (service.labor_rate || 0);
-      const materialRate = (service.material_rate || 0);
-      const equipmentRate = (service.equipment_rate || 0);
-      const unitRate = laborRate + materialRate + equipmentRate;
+      // Calculate costs (match site store estimate logic)
+      const productionRate = service.production_rate || 0; // units per hour
+      const laborHours = productionRate > 0 ? quantity / productionRate : 0;
+      const laborCost = laborHours * service.crew_size * service.labor_rate * 1.35; // 35% burden
+      const materialCost = quantity * service.material_cost * service.waste_factor;
+      const equipmentCost = service.equipment_cost_fixed + (service.equipment_cost_hourly * laborHours);
+      const subtotal = Math.max(laborCost + materialCost + equipmentCost, service.minimum_charge);
+      const unitRate = quantity > 0 ? subtotal / quantity : 0;
 
-      const laborCost = quantity * laborRate;
-      const materialCost = quantity * materialRate;
-      const equipmentCost = quantity * equipmentRate;
-      const subtotal = laborCost + materialCost + equipmentCost;
+      if (productionRate > 0 && laborHours > 0) {
+        formula += ` (prod: ${productionRate}/hr, labor: ${laborHours.toFixed(1)}h)`;
+      }
 
       breakdowns.push({
         tradeName: trade.name,
