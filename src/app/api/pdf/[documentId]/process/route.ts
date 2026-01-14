@@ -61,7 +61,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Check if already processed
+    // Check if already processed successfully
     if (document.status === 'ready' && document.page_count) {
       return NextResponse.json({
         success: true,
@@ -70,10 +70,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    // Update status to processing
+    // Clear any existing pages if retrying after error
+    if (document.status === 'error') {
+      await supabase
+        .from('pdf_pages')
+        .delete()
+        .eq('document_id', documentId);
+    }
+
+    // Update status to processing and clear error
     await supabase
       .from('pdf_documents')
-      .update({ status: 'processing' })
+      .update({ status: 'processing', error_message: null })
       .eq('id', documentId);
 
     // Download PDF from storage
