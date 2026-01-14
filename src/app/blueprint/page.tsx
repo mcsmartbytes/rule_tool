@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useBlueprintStore } from '@/lib/blueprint/store';
 import type { PDFDocument, PDFPageCategory } from '@/lib/supabase/types';
 
@@ -173,6 +174,7 @@ function UploadDropzone({ onUpload, isUploading, progress }: {
 
 export default function BlueprintPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   const documents = useBlueprintStore((s) => s.documents);
   const setDocuments = useBlueprintStore((s) => s.setDocuments);
@@ -246,9 +248,8 @@ export default function BlueprintPage() {
 
   const handleSelectDocument = useCallback((doc: PDFDocument) => {
     setActiveDocument(doc.id);
-    // TODO: Navigate to document detail page
-    // router.push(`/blueprint/${doc.id}`);
-  }, [setActiveDocument]);
+    router.push(`/blueprint/${doc.id}`);
+  }, [router, setActiveDocument]);
 
   if (isLoading) {
     return (

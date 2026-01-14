@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+
+export const runtime = 'nodejs';
 
 // Initialize Supabase client with service role for storage operations
 const supabase = createClient(
@@ -9,6 +13,20 @@ const supabase = createClient(
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const ALLOWED_TYPES = ['application/pdf'];
+const STORAGE_BUCKET = 'pdf-documents';
+
+function startWorker(documentId: string) {
+  const scriptPath = path.join(process.cwd(), 'scripts', 'process-pdf.mjs');
+  const child = spawn(process.execPath, [scriptPath, documentId], {
+    detached: true,
+    stdio: 'ignore',
+    env: {
+      ...process.env,
+      PDF_STORAGE_BUCKET: STORAGE_BUCKET,
+    },
+  });
+  child.unref();
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Upload to Supabase Storage
     const arrayBuffer = await file.arrayBuffer();
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('pdf-documents')
+      .from(STORAGE_BUCKET)
       .upload(storagePath, arrayBuffer, {
         contentType: 'application/pdf',
         upsert: false,
@@ -82,16 +100,19 @@ export async function POST(request: NextRequest) {
     if (dbError) {
       console.error('Database error:', dbError);
       // Clean up uploaded file
-      await supabase.storage.from('pdf-documents').remove([storagePath]);
+      await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
       return NextResponse.json(
         { error: 'Failed to create document record' },
         { status: 500 }
       );
     }
 
-    // TODO: Trigger background job to extract pages
-    // For now, we'll handle page extraction in a separate endpoint
-    // or could use Supabase Edge Functions
+    // Trigger background job to extract/render pages (best-effort)
+    try {
+      startWorker(document.id);
+    } catch (err) {
+      console.warn('Failed to start PDF worker:', err);
+    }
 
     return NextResponse.json({
       success: true,
