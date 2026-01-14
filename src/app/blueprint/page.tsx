@@ -243,6 +243,7 @@ export default function BlueprintPage() {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
+        router.push(`/blueprint/${data.document.id}`);
       }
     } catch (error) {
       console.error('Upload failed:', error);

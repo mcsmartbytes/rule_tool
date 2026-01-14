@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { spawn } from 'node:child_process';
-import path from 'node:path';
 
 export const runtime = 'nodejs';
 
@@ -21,19 +19,6 @@ function getServiceSupabase() {
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const ALLOWED_TYPES = ['application/pdf'];
 const STORAGE_BUCKET = 'pdf-documents';
-
-function startWorker(documentId: string) {
-  const scriptPath = path.join(process.cwd(), 'scripts', 'process-pdf.mjs');
-  const child = spawn(process.execPath, [scriptPath, documentId], {
-    detached: true,
-    stdio: 'ignore',
-    env: {
-      ...process.env,
-      PDF_STORAGE_BUCKET: STORAGE_BUCKET,
-    },
-  });
-  child.unref();
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -115,12 +100,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Trigger background job to extract/render pages (best-effort)
-    try {
-      startWorker(document.id);
-    } catch (err) {
-      console.warn('Failed to start PDF worker:', err);
-    }
+    // NOTE: Page rendering is done via POST /api/pdf/process.
+    // (Serverless deploys generally can't spawn detached worker processes reliably.)
 
     return NextResponse.json({
       success: true,

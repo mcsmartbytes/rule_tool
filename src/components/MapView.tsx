@@ -31,6 +31,14 @@ interface MapViewProps {
   aiFeatures?: AIDetectedFeature[];
   highlightedAIFeatureId?: string | null;
   captureRef?: React.MutableRefObject<(() => Promise<MapCaptureResult | null>) | null>;
+  onMapClick?: (lng: number, lat: number) => void;
+  blueprintOverlay?: {
+    id: string;
+    imageUrl: string;
+    // Mapbox image source expects [topLeft, topRight, bottomRight, bottomLeft]
+    corners: Array<[number, number]>;
+    opacity?: number;
+  } | null;
 }
 
 export default function MapView({
@@ -38,6 +46,8 @@ export default function MapView({
   aiFeatures = [],
   highlightedAIFeatureId,
   captureRef,
+  onMapClick,
+  blueprintOverlay,
 }: MapViewProps = {}) {
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const drawRef = useRef<MapboxDraw | null>(null)
@@ -75,6 +85,8 @@ export default function MapView({
   const [imageryMode, setImageryMode] = useState<'mapbox' | 'google'>('mapbox')
   const [googleAttribution, setGoogleAttribution] = useState<string>('')
   const [imageryLoading, setImageryLoading] = useState(false)
+  const onMapClickRef = useRef<MapViewProps['onMapClick']>(onMapClick)
+  const blueprintOverlayRef = useRef<MapViewProps['blueprintOverlay']>(blueprintOverlay || null)
 
   useEffect(() => {
     setMounted(true)
@@ -83,6 +95,14 @@ export default function MapView({
   useEffect(() => {
     onGeometryCreateRef.current = onGeometryCreate
   }, [onGeometryCreate])
+
+  useEffect(() => {
+    onMapClickRef.current = onMapClick
+  }, [onMapClick])
+
+  useEffect(() => {
+    blueprintOverlayRef.current = blueprintOverlay || null
+  }, [blueprintOverlay])
 
   useEffect(() => {
     heightMeasurementsRef.current = heightMeasurements
@@ -660,6 +680,21 @@ export default function MapView({
     };
   }, [captureRef]);
 
+  // Bridge raw map clicks to parent (used for blueprint placement)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const handler = (e: MapMouseEvent) => {
+      const cb = onMapClickRef.current
+      if (!cb) return
+      cb(e.lngLat.lng, e.lngLat.lat)
+    }
+    map.on('click', handler)
+    return () => {
+      try { map.off('click', handler) } catch {}
+    }
+  }, [mapReadyTick])
+
   // Render AI detected features as overlay
   useEffect(() => {
     const map = mapRef.current;
@@ -747,6 +782,52 @@ export default function MapView({
       } catch {}
     };
   }, [aiFeatures, highlightedAIFeatureId, mapReadyTick]);
+
+  // Render blueprint overlay image (page placed on map)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    const sourceId = 'blueprint-overlay-src'
+    const layerId = 'blueprint-overlay-layer'
+
+    const apply = () => {
+      const overlay = blueprintOverlayRef.current
+      if (!map.isStyleLoaded()) return
+
+      // Remove existing
+      try {
+        if (map.getLayer(layerId)) map.removeLayer(layerId)
+        if (map.getSource(sourceId)) map.removeSource(sourceId)
+      } catch {}
+
+      if (!overlay) return
+
+      try {
+        map.addSource(sourceId, {
+          type: 'image',
+          url: overlay.imageUrl,
+          coordinates: overlay.corners,
+        } as any)
+
+        map.addLayer({
+          id: layerId,
+          type: 'raster',
+          source: sourceId,
+          paint: {
+            'raster-opacity': overlay.opacity ?? 0.6,
+          },
+        })
+      } catch {}
+    }
+
+    apply()
+    const onStyleLoad = () => apply()
+    map.on('style.load', onStyleLoad)
+    return () => {
+      try { map.off('style.load', onStyleLoad) } catch {}
+    }
+  }, [mapReadyTick, blueprintOverlay])
 
   // Render site objects on map with selection highlighting
   useEffect(() => {
