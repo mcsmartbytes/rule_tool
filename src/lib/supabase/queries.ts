@@ -56,7 +56,7 @@ export async function createSite(site: SiteInsert) {
 export async function updateSite(id: string, updates: SiteUpdate) {
   const { data, error } = await supabase
     .from('sites')
-    .update(updates)
+    .update(updates as never)
     .eq('id', id)
     .select()
     .single();
@@ -92,7 +92,7 @@ export async function getSiteObjects(siteId: string) {
 export async function createSiteObject(obj: SiteObjectInsert) {
   const { data, error } = await supabase
     .from('site_objects')
-    .insert(obj)
+    .insert(obj as never)
     .select()
     .single();
 
@@ -103,7 +103,7 @@ export async function createSiteObject(obj: SiteObjectInsert) {
 export async function updateSiteObject(id: string, updates: SiteObjectUpdate) {
   const { data, error } = await supabase
     .from('site_objects')
-    .update(updates)
+    .update(updates as never)
     .eq('id', id)
     .select()
     .single();
@@ -252,7 +252,7 @@ export async function getLatestUnifiedEstimate(siteId: string) {
 export async function saveUnifiedEstimate(estimate: UnifiedEstimateInsert) {
   const { data, error } = await supabase
     .from('unified_estimates')
-    .insert(estimate)
+    .insert(estimate as never)
     .select()
     .single();
 
