@@ -8,7 +8,7 @@
     "build": "next build",
     "vercel-build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "branch-help": "node scripts/branch-help.js",
     "push-work": "node scripts/push-work.js",
     "pdf:process": "node scripts/process-pdf.mjs",
