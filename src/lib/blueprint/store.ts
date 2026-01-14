@@ -299,7 +299,7 @@ export function pendingFeatureToSiteObject(
     site_id: siteId,
     object_type: feature.object_type,
     sub_type: feature.sub_type,
-    geometry: feature.geometry as GeoJSON.Geometry,
+    geometry: feature.geometry as unknown as GeoJSON.Geometry,
     measurements: feature.measurements,
     properties: feature.properties,
     source: 'imported',

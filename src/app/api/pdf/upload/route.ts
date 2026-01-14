@@ -89,16 +89,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Trigger background job to extract pages
-    // For now, we'll handle page extraction in a separate endpoint
-    // or could use Supabase Edge Functions
+    // Trigger page processing
+    // We do this async so the upload returns quickly
+    const processUrl = new URL(`/api/pdf/${document.id}/process`, request.url);
+
+    // Fire and forget - don't await
+    fetch(processUrl.toString(), { method: 'POST' })
+      .then((res) => {
+        if (!res.ok) {
+          console.error('Processing trigger failed:', res.status);
+        }
+      })
+      .catch((err) => {
+        console.error('Processing trigger error:', err);
+      });
 
     return NextResponse.json({
       success: true,
       document: {
         id: document.id,
         name: document.name,
-        status: document.status,
+        status: 'processing',
         fileSize: document.file_size,
       },
       message: 'File uploaded successfully. Processing pages...',

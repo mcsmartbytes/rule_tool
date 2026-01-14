@@ -3,7 +3,7 @@
  * Converts pixel coordinates to geographic coordinates
  */
 
-import type { MapBounds, RawAIFeature, AIDetectedFeature } from './types';
+import type { MapBounds, RawAIFeature, AIDetectedFeature, RawGeometry } from './types';
 import type { SiteObjectType } from '@/lib/supabase/types';
 
 /**
@@ -43,39 +43,42 @@ export function pixelCoordsToGeo(
  * Convert raw AI response geometry (pixel coords) to GeoJSON geometry (geo coords)
  */
 export function convertGeometry(
-  rawGeometry: RawAIFeature['geometry'],
+  rawGeometry: RawGeometry,
   imageWidth: number,
   imageHeight: number,
   bounds: MapBounds
 ): GeoJSON.Geometry {
-  if (rawGeometry.type === 'Point') {
-    const coords = rawGeometry.coordinates as number[];
-    const [lng, lat] = pixelToGeo(coords[0], coords[1], imageWidth, imageHeight, bounds);
-    return {
-      type: 'Point',
-      coordinates: [lng, lat],
-    };
-  }
+  switch (rawGeometry.type) {
+    case 'Point': {
+      const [px, py] = rawGeometry.coordinates;
+      const [lng, lat] = pixelToGeo(px, py, imageWidth, imageHeight, bounds);
+      return {
+        type: 'Point',
+        coordinates: [lng, lat],
+      };
+    }
 
-  if (rawGeometry.type === 'LineString') {
-    const pixelCoords = rawGeometry.coordinates as number[][];
-    return {
-      type: 'LineString',
-      coordinates: pixelCoordsToGeo(pixelCoords, imageWidth, imageHeight, bounds),
-    };
-  }
+    case 'LineString': {
+      return {
+        type: 'LineString',
+        coordinates: pixelCoordsToGeo(rawGeometry.coordinates, imageWidth, imageHeight, bounds),
+      };
+    }
 
-  if (rawGeometry.type === 'Polygon') {
-    const rings = rawGeometry.coordinates as number[][][];
-    return {
-      type: 'Polygon',
-      coordinates: rings.map(ring =>
-        pixelCoordsToGeo(ring, imageWidth, imageHeight, bounds)
-      ),
-    };
-  }
+    case 'Polygon': {
+      return {
+        type: 'Polygon',
+        coordinates: rawGeometry.coordinates.map(ring =>
+          pixelCoordsToGeo(ring, imageWidth, imageHeight, bounds)
+        ),
+      };
+    }
 
-  throw new Error(`Unsupported geometry type: ${rawGeometry.type}`);
+    default: {
+      const _exhaustive: never = rawGeometry;
+      throw new Error(`Unsupported geometry type: ${_exhaustive}`);
+    }
+  }
 }
 
 /**

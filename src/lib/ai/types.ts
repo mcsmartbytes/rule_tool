@@ -49,14 +49,29 @@ export interface AIDetectionState {
   error: string | null;
 }
 
+// Raw geometry types from Claude Vision (pixel coordinates)
+interface RawPointGeometry {
+  type: 'Point';
+  coordinates: [number, number]; // [x, y] pixel coordinates
+}
+
+interface RawLineStringGeometry {
+  type: 'LineString';
+  coordinates: number[][]; // [[x, y], [x, y], ...]
+}
+
+interface RawPolygonGeometry {
+  type: 'Polygon';
+  coordinates: number[][][]; // [[[x, y], [x, y], ...]]
+}
+
+export type RawGeometry = RawPointGeometry | RawLineStringGeometry | RawPolygonGeometry;
+
 // Raw response from Claude Vision (pixel coordinates)
 export interface RawAIFeature {
   type: string;
   subType?: string;
   confidence: number;
   label?: string;
-  geometry: {
-    type: 'Polygon' | 'LineString' | 'Point';
-    coordinates: number[][] | number[][][]; // Pixel coordinates
-  };
+  geometry: RawGeometry;
 }

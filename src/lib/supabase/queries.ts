@@ -45,7 +45,7 @@ export async function getSite(id: string) {
 export async function createSite(site: SiteInsert) {
   const { data, error } = await supabase
     .from('sites')
-    .insert(site)
+    .insert(site as never)
     .select()
     .single();
 

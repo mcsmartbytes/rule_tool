@@ -38,11 +38,13 @@ const TYPE_ICONS: Record<string, string> = {
 function getMeasurement(geometry: GeoJSON.Geometry): { value: number; unit: string } {
   try {
     if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') {
-      const area = turf.area(geometry as turf.AllGeoJSON) * 10.764; // m² to ft²
+      const feature = turf.feature(geometry);
+      const area = turf.area(feature) * 10.764; // m² to ft²
       return { value: Math.round(area), unit: 'sq ft' };
     }
     if (geometry.type === 'LineString' || geometry.type === 'MultiLineString') {
-      const length = turf.length(geometry as turf.AllGeoJSON, { units: 'feet' });
+      const feature = turf.feature(geometry);
+      const length = turf.length(feature, { units: 'feet' });
       return { value: Math.round(length), unit: 'ft' };
     }
     return { value: 1, unit: 'ea' };

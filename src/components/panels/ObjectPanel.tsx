@@ -138,8 +138,8 @@ function calculateObjectCosts(
 
       // Get rates from service
       const laborRate = (service.labor_rate || 0);
-      const materialRate = (service.material_rate || 0);
-      const equipmentRate = (service.equipment_rate || 0);
+      const materialRate = (service.material_cost || 0);
+      const equipmentRate = (service.equipment_cost_hourly || 0);
       const unitRate = laborRate + materialRate + equipmentRate;
 
       const laborCost = quantity * laborRate;
