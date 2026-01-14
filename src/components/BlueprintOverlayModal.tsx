@@ -7,6 +7,7 @@ type PDFDocument = {
   name: string;
   status: 'processing' | 'ready' | 'error';
   page_count: number | null;
+  error_message?: string | null;
 };
 
 type PageWithUrls = {
@@ -29,8 +30,10 @@ export function BlueprintOverlayModal({
   const [docs, setDocs] = useState<PDFDocument[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [pages, setPages] = useState<PageWithUrls[]>([]);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const selectedDoc = useMemo(() => docs.find((d) => d.id === selectedDocId) || null, [docs, selectedDocId]);
 
@@ -74,7 +77,10 @@ export function BlueprintOverlayModal({
         const res = await fetch(`/api/pdf/documents/${selectedDocId}`, { cache: 'no-store' });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Failed to load pages');
-        if (!cancelled) setPages(data.pages || []);
+        if (!cancelled) {
+          setPages(data.pages || []);
+          setPdfUrl(data.pdf_url || null);
+        }
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Failed to load pages';
         if (!cancelled) setError(msg);
@@ -89,6 +95,35 @@ export function BlueprintOverlayModal({
   }, [open, selectedDocId]);
 
   if (!open) return null;
+
+  const triggerProcessing = async () => {
+    if (!selectedDocId) return;
+    setIsProcessing(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/pdf/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId: selectedDocId }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Failed to process PDF');
+      // Reload pages after processing run
+      const res2 = await fetch(`/api/pdf/documents/${selectedDocId}`, { cache: 'no-store' });
+      const data2 = await res2.json();
+      if (data2.success) {
+        setPages(data2.pages || []);
+        setPdfUrl(data2.pdf_url || null);
+      } else {
+        throw new Error(data2.error || 'Failed to reload pages');
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to process PDF';
+      setError(msg);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[2000] bg-black/40 flex items-center justify-center p-4">
@@ -128,6 +163,33 @@ export function BlueprintOverlayModal({
               )}
             </div>
 
+            {selectedDoc?.status === 'error' && selectedDoc?.error_message && (
+              <div className="mt-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-2 text-xs">
+                {selectedDoc.error_message}
+              </div>
+            )}
+
+            <div className="mt-3 flex flex-col gap-2">
+              <button
+                onClick={triggerProcessing}
+                disabled={!selectedDocId || isProcessing}
+                className="w-full px-3 py-2 rounded-lg text-sm bg-blue-600 text-white disabled:opacity-50"
+                title="Render pages so they can be previewed/overlaid"
+              >
+                {isProcessing ? 'Processing…' : 'Process pages'}
+              </button>
+              {pdfUrl && (
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full px-3 py-2 rounded-lg text-sm border border-gray-300 text-gray-700 hover:bg-gray-50 text-center"
+                >
+                  Open PDF
+                </a>
+              )}
+            </div>
+
             {error && (
               <div className="mt-3 bg-red-50 border border-red-200 text-red-700 rounded-lg p-2 text-xs">
                 {error}
@@ -140,7 +202,7 @@ export function BlueprintOverlayModal({
             <div className="text-xs font-medium text-gray-700 mb-2">Pages</div>
             {pages.length === 0 ? (
               <div className="border border-gray-200 rounded-lg p-6 text-sm text-gray-600">
-                No pages yet. In the document page, click “Process PDF” until pages appear.
+                No pages yet. Click “Process pages” to render page previews.
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto">

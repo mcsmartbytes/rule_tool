@@ -14,10 +14,10 @@ const MAX_RUN_MS = Number(process.env.PDF_MAX_RUN_MS || 25_000);
 
 function getServiceSupabase() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceKey) {
-    throw new Error('Missing Supabase env vars (NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)');
+    throw new Error('Missing Supabase env vars (NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY).');
   }
 
   return createClient(supabaseUrl, serviceKey, {
@@ -64,9 +64,10 @@ async function upsertPage(
 }
 
 export async function POST(request: NextRequest) {
+  let documentId: string | undefined;
   try {
     const body = await request.json().catch(() => null);
-    const documentId = body?.documentId as string | undefined;
+    documentId = body?.documentId as string | undefined;
 
     if (!documentId) {
       return NextResponse.json({ success: false, error: 'Missing documentId' }, { status: 400 });
@@ -188,6 +189,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, started: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal error';
+    // Best-effort: persist error on the document so UI can display it
+    try {
+      if (documentId) {
+        const supabase = getServiceSupabase();
+        await supabase
+          .from('pdf_documents')
+          .update({ status: 'error', error_message: message })
+          .eq('id', documentId);
+      }
+    } catch {}
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
