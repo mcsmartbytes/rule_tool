@@ -54,6 +54,8 @@ export async function GET(
       return NextResponse.json({ success: false, error: pagesError.message }, { status: 500 });
     }
 
+    const pdf_url = await signPath(supabase, document.storage_path);
+
     const pagesWithUrls = await Promise.all(
       (pages || []).map(async (p: any) => ({
         ...p,
@@ -65,6 +67,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       document,
+      pdf_url,
       pages: pagesWithUrls,
     });
   } catch (error) {

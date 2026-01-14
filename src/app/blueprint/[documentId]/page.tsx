@@ -23,6 +23,7 @@ type PageWithUrls = {
 type DocumentResponse = {
   success: boolean;
   error?: string;
+  pdf_url?: string | null;
   document?: {
     id: string;
     name: string;
@@ -43,6 +44,7 @@ export default function BlueprintDocumentPage() {
   const [error, setError] = useState<string | null>(null);
   const [doc, setDoc] = useState<DocumentResponse['document'] | null>(null);
   const [pages, setPages] = useState<PageWithUrls[]>([]);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCategorizing, setIsCategorizing] = useState(false);
@@ -64,6 +66,7 @@ export default function BlueprintDocumentPage() {
 
     setDoc(data.document || null);
     setPages(data.pages || []);
+    setPdfUrl(data.pdf_url || null);
     if (!activePageId && data.pages?.length) {
       setActivePageId(data.pages[0].id);
     }
@@ -179,6 +182,17 @@ export default function BlueprintDocumentPage() {
             >
               Refresh
             </button>
+            {pdfUrl && (
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+                title="Open the original uploaded PDF"
+              >
+                Open PDF
+              </a>
+            )}
             <button
               onClick={categorizePages}
               disabled={isCategorizing || pages.length === 0}
