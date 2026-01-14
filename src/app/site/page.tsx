@@ -24,8 +24,6 @@ export interface BlueprintOverlay {
   documentId: string;
   imageUrl: string;
   pageNumber: number;
-  width: number;
-  height: number;
   category: string | null;
   // Position on map (corners: [topLeft, topRight, bottomRight, bottomLeft] as [lng, lat])
   corners?: [[number, number], [number, number], [number, number], [number, number]];

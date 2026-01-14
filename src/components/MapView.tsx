@@ -32,8 +32,6 @@ export interface BlueprintOverlay {
   documentId: string;
   imageUrl: string;
   pageNumber: number;
-  width: number;
-  height: number;
   category: string | null;
   corners?: [[number, number], [number, number], [number, number], [number, number]];
   opacity?: number;

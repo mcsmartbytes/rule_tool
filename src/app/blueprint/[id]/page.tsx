@@ -309,8 +309,6 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
       documentId: page.document_id,
       imageUrl: page.imageUrl,
       pageNumber: page.page_number,
-      width: page.width,
-      height: page.height,
       category: page.category,
     };
 
