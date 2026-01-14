@@ -45,6 +45,7 @@ export default function BlueprintDocumentPage() {
   const [pages, setPages] = useState<PageWithUrls[]>([]);
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCategorizing, setIsCategorizing] = useState(false);
 
   const activePage = useMemo(
     () => pages.find((p) => p.id === activePageId) || pages[0] || null,
@@ -87,6 +88,28 @@ export default function BlueprintDocumentPage() {
     } finally {
       setIsProcessing(false);
       // Trigger an immediate refresh
+      fetchDoc();
+    }
+  }, [documentId, fetchDoc]);
+
+  const categorizePages = useCallback(async () => {
+    setIsCategorizing(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/pdf/categorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to categorize pages');
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to categorize pages';
+      setError(msg);
+    } finally {
+      setIsCategorizing(false);
       fetchDoc();
     }
   }, [documentId, fetchDoc]);
@@ -155,6 +178,14 @@ export default function BlueprintDocumentPage() {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
             >
               Refresh
+            </button>
+            <button
+              onClick={categorizePages}
+              disabled={isCategorizing || pages.length === 0}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+              title="Auto-categorize pages (site plan, detail, schedule, etc.)"
+            >
+              {isCategorizing ? 'Categorizing…' : 'Categorize pages'}
             </button>
             <button
               onClick={startProcessing}
@@ -243,7 +274,14 @@ export default function BlueprintDocumentPage() {
                         )}
                       </div>
                       <div className="px-2 py-1 text-xs text-gray-700">
-                        Page {p.page_number}
+                        <div className="flex items-center justify-between gap-2">
+                          <span>Page {p.page_number}</span>
+                          {p.category && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                              {p.category}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   );
