@@ -50,7 +50,7 @@ const THUMBNAIL_QUALITY = 70;
  * Sharp uses libvips which can handle PDFs directly on Vercel
  */
 export async function processPDF(pdfBuffer: Buffer | ArrayBuffer): Promise<PDFProcessingResult> {
-  const buffer = pdfBuffer instanceof Buffer ? pdfBuffer : Buffer.from(pdfBuffer);
+  const buffer = pdfBuffer instanceof Buffer ? pdfBuffer : Buffer.from(new Uint8Array(pdfBuffer));
 
   // Get page count and metadata using pdfjs (lightweight operation)
   let pageCount = 0;
@@ -173,7 +173,7 @@ export async function processSinglePage(
   pdfBuffer: Buffer | ArrayBuffer,
   pageNumber: number
 ): Promise<ProcessedPage | null> {
-  const buffer = pdfBuffer instanceof Buffer ? pdfBuffer : Buffer.from(pdfBuffer);
+  const buffer = pdfBuffer instanceof Buffer ? pdfBuffer : Buffer.from(new Uint8Array(pdfBuffer));
   return renderPageWithSharp(buffer, pageNumber);
 }
 
@@ -181,7 +181,7 @@ export async function processSinglePage(
  * Get the page count of a PDF without processing all pages
  */
 export async function getPDFPageCount(pdfBuffer: Buffer | ArrayBuffer): Promise<number> {
-  const buffer = pdfBuffer instanceof Buffer ? pdfBuffer : Buffer.from(pdfBuffer);
+  const buffer = pdfBuffer instanceof Buffer ? pdfBuffer : Buffer.from(new Uint8Array(pdfBuffer));
 
   try {
     const pdfjs = await getPdfjs();
