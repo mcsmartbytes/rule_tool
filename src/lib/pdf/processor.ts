@@ -1,7 +1,6 @@
-import { createCanvas } from 'canvas';
 import sharp from 'sharp';
 
-// Import pdfjs-dist for Node.js - using dynamic import for ESM module
+// Import pdfjs-dist for Node.js - for page count and metadata only
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pdfjsLib: any = null;
 
@@ -41,54 +40,63 @@ export interface PDFProcessingResult {
 }
 
 // Configuration
-const RENDER_SCALE = 2.0; // 2x for good quality
+const RENDER_DENSITY = 150; // DPI for rendering
 const THUMBNAIL_WIDTH = 300;
 const JPEG_QUALITY = 85;
 const THUMBNAIL_QUALITY = 70;
 
 /**
- * Process a PDF buffer and extract all pages as images
+ * Process a PDF buffer and extract all pages as images using sharp
+ * Sharp uses libvips which can handle PDFs directly on Vercel
  */
 export async function processPDF(pdfBuffer: Buffer | ArrayBuffer): Promise<PDFProcessingResult> {
-  const pdfjs = await getPdfjs();
+  const buffer = pdfBuffer instanceof Buffer ? pdfBuffer : Buffer.from(pdfBuffer);
 
-  // Convert to Uint8Array for pdfjs
-  const data = pdfBuffer instanceof Buffer
-    ? new Uint8Array(pdfBuffer)
-    : new Uint8Array(pdfBuffer);
-
-  // Load the PDF document (with serverless-compatible options)
-  const loadingTask = pdfjs.getDocument({
-    data,
-    ...PDF_LOAD_OPTIONS,
-  });
-
-  const pdfDoc = await loadingTask.promise;
-  const pageCount = pdfDoc.numPages;
-
-  // Get metadata
+  // Get page count and metadata using pdfjs (lightweight operation)
+  let pageCount = 0;
   let metadata: PDFProcessingResult['metadata'] = {};
+
   try {
-    const meta = await pdfDoc.getMetadata();
-    if (meta?.info) {
-      metadata = {
-        title: meta.info.Title as string | undefined,
-        author: meta.info.Author as string | undefined,
-        subject: meta.info.Subject as string | undefined,
-        creator: meta.info.Creator as string | undefined,
-      };
+    const pdfjs = await getPdfjs();
+    const data = new Uint8Array(buffer);
+    const loadingTask = pdfjs.getDocument({ data, ...PDF_LOAD_OPTIONS });
+    const pdfDoc = await loadingTask.promise;
+    pageCount = pdfDoc.numPages;
+
+    try {
+      const meta = await pdfDoc.getMetadata();
+      if (meta?.info) {
+        metadata = {
+          title: meta.info.Title as string | undefined,
+          author: meta.info.Author as string | undefined,
+          subject: meta.info.Subject as string | undefined,
+          creator: meta.info.Creator as string | undefined,
+        };
+      }
+    } catch {
+      // Metadata extraction failed, continue without it
     }
-  } catch {
-    // Metadata extraction failed, continue without it
+  } catch (error) {
+    console.error('Failed to get PDF info with pdfjs:', error);
+    // Fallback: try to render and count pages
+    pageCount = await countPagesWithSharp(buffer);
   }
 
-  // Process each page
+  console.log(`PDF has ${pageCount} pages, rendering with sharp...`);
+
+  // Process each page using sharp
   const pages: ProcessedPage[] = [];
 
   for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
-    const page = await pdfDoc.getPage(pageNum);
-    const processedPage = await renderPage(page, pageNum);
-    pages.push(processedPage);
+    try {
+      const processedPage = await renderPageWithSharp(buffer, pageNum);
+      if (processedPage) {
+        pages.push(processedPage);
+        console.log(`Rendered page ${pageNum}/${pageCount}`);
+      }
+    } catch (error) {
+      console.error(`Failed to render page ${pageNum}:`, error);
+    }
   }
 
   return {
@@ -99,47 +107,63 @@ export async function processPDF(pdfBuffer: Buffer | ArrayBuffer): Promise<PDFPr
 }
 
 /**
- * Render a single PDF page to image buffers
+ * Render a single PDF page using sharp
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function renderPage(page: any, pageNumber: number): Promise<ProcessedPage> {
-  // Get page dimensions at render scale
-  const viewport = page.getViewport({ scale: RENDER_SCALE });
-  const width = Math.floor(viewport.width);
-  const height = Math.floor(viewport.height);
+async function renderPageWithSharp(pdfBuffer: Buffer, pageNumber: number): Promise<ProcessedPage | null> {
+  try {
+    // Sharp can read specific pages from multi-page PDFs using the page option
+    const image = sharp(pdfBuffer, {
+      density: RENDER_DENSITY,
+      page: pageNumber - 1, // sharp uses 0-based page index
+    });
 
-  // Create canvas
-  const canvas = createCanvas(width, height);
-  const context = canvas.getContext('2d');
+    // Get metadata for dimensions
+    const meta = await image.metadata();
+    const width = meta.width || 0;
+    const height = meta.height || 0;
 
-  // Render page to canvas
-  // pdfjs expects a specific render context format
-  await page.render({
-    canvasContext: context,
-    viewport: viewport,
-  }).promise;
+    if (width === 0 || height === 0) {
+      console.error(`Page ${pageNumber} has invalid dimensions`);
+      return null;
+    }
 
-  // Convert canvas to PNG buffer
-  const pngBuffer = canvas.toBuffer('image/png');
+    // Create full-size JPEG
+    const imageBuffer = await image
+      .jpeg({ quality: JPEG_QUALITY })
+      .toBuffer();
 
-  // Create full-size JPEG for storage (smaller than PNG)
-  const imageBuffer = await sharp(pngBuffer)
-    .jpeg({ quality: JPEG_QUALITY })
-    .toBuffer();
+    // Create thumbnail
+    const thumbnailBuffer = await sharp(pdfBuffer, {
+      density: RENDER_DENSITY,
+      page: pageNumber - 1,
+    })
+      .resize(THUMBNAIL_WIDTH, null, { fit: 'inside' })
+      .jpeg({ quality: THUMBNAIL_QUALITY })
+      .toBuffer();
 
-  // Create thumbnail
-  const thumbnailBuffer = await sharp(pngBuffer)
-    .resize(THUMBNAIL_WIDTH, null, { fit: 'inside' })
-    .jpeg({ quality: THUMBNAIL_QUALITY })
-    .toBuffer();
+    return {
+      pageNumber,
+      width,
+      height,
+      imageBuffer,
+      thumbnailBuffer,
+    };
+  } catch (error) {
+    console.error(`Sharp failed to render page ${pageNumber}:`, error);
+    return null;
+  }
+}
 
-  return {
-    pageNumber,
-    width,
-    height,
-    imageBuffer,
-    thumbnailBuffer,
-  };
+/**
+ * Count pages in PDF using sharp (fallback method)
+ */
+async function countPagesWithSharp(pdfBuffer: Buffer): Promise<number> {
+  try {
+    const meta = await sharp(pdfBuffer).metadata();
+    return meta.pages || 1;
+  } catch {
+    return 1;
+  }
 }
 
 /**
@@ -149,42 +173,24 @@ export async function processSinglePage(
   pdfBuffer: Buffer | ArrayBuffer,
   pageNumber: number
 ): Promise<ProcessedPage | null> {
-  const pdfjs = await getPdfjs();
-
-  const data = pdfBuffer instanceof Buffer
-    ? new Uint8Array(pdfBuffer)
-    : new Uint8Array(pdfBuffer);
-
-  const loadingTask = pdfjs.getDocument({
-    data,
-    ...PDF_LOAD_OPTIONS,
-  });
-
-  const pdfDoc = await loadingTask.promise;
-
-  if (pageNumber < 1 || pageNumber > pdfDoc.numPages) {
-    return null;
-  }
-
-  const page = await pdfDoc.getPage(pageNumber);
-  return renderPage(page, pageNumber);
+  const buffer = pdfBuffer instanceof Buffer ? pdfBuffer : Buffer.from(pdfBuffer);
+  return renderPageWithSharp(buffer, pageNumber);
 }
 
 /**
  * Get the page count of a PDF without processing all pages
  */
 export async function getPDFPageCount(pdfBuffer: Buffer | ArrayBuffer): Promise<number> {
-  const pdfjs = await getPdfjs();
+  const buffer = pdfBuffer instanceof Buffer ? pdfBuffer : Buffer.from(pdfBuffer);
 
-  const data = pdfBuffer instanceof Buffer
-    ? new Uint8Array(pdfBuffer)
-    : new Uint8Array(pdfBuffer);
-
-  const loadingTask = pdfjs.getDocument({
-    data,
-    ...PDF_LOAD_OPTIONS,
-  });
-
-  const pdfDoc = await loadingTask.promise;
-  return pdfDoc.numPages;
+  try {
+    const pdfjs = await getPdfjs();
+    const data = new Uint8Array(buffer);
+    const loadingTask = pdfjs.getDocument({ data, ...PDF_LOAD_OPTIONS });
+    const pdfDoc = await loadingTask.promise;
+    return pdfDoc.numPages;
+  } catch {
+    // Fallback to sharp
+    return countPagesWithSharp(buffer);
+  }
 }
