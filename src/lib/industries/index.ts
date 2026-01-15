@@ -25,6 +25,10 @@ export { landscapingConfig, default as landscaping } from './landscaping';
 export { generalContractorConfig, default as generalContractor } from './general-contractor';
 export { fencingConfig, default as fencing } from './fencing';
 export { paintingConfig, default as painting } from './painting';
+export { hvacConfig, default as hvac } from './hvac';
+
+// HVAC rules engine exports
+export * from './hvac-rules';
 
 // All configs as a map
 import { sealingStripingConfig } from './sealing-striping';
@@ -34,6 +38,7 @@ import { landscapingConfig } from './landscaping';
 import { generalContractorConfig } from './general-contractor';
 import { fencingConfig } from './fencing';
 import { paintingConfig } from './painting';
+import { hvacConfig } from './hvac';
 import type { IndustryConfig, Service } from './types';
 
 export const industries: Record<string, IndustryConfig> = {
@@ -44,6 +49,7 @@ export const industries: Record<string, IndustryConfig> = {
   'general-contractor': generalContractorConfig,
   'fencing': fencingConfig,
   'painting': paintingConfig,
+  'hvac': hvacConfig,
 };
 
 /**
