@@ -6,6 +6,12 @@ import { useRouter } from 'next/navigation';
 import { useBlueprintStore } from '@/lib/blueprint/store';
 import type { PDFDocument, PDFPage } from '@/lib/supabase/types';
 import * as pdfjsLib from 'pdfjs-dist';
+import type {
+  BlueprintAnalysisResult,
+  DetectedArea,
+  DetectedDimension,
+  DetectedMaterial,
+} from '@/lib/blueprint/analysis-types';
 
 // Set worker path for pdf.js - use unpkg CDN which has all versions
 if (typeof window !== 'undefined') {
@@ -28,11 +34,21 @@ interface DocumentData {
 function ClientRenderedPage({
   pdfUrl,
   pageNumber,
+  documentId,
   onExportToMap,
+  onAnalyze,
+  onViewResults,
+  analysisResult,
+  isAnalyzing,
 }: {
   pdfUrl: string;
   pageNumber: number;
+  documentId: string;
   onExportToMap: (imageDataUrl: string) => void;
+  onAnalyze: (imageDataUrl: string, pageNumber: number) => void;
+  onViewResults?: () => void;
+  analysisResult?: BlueprintAnalysisResult | null;
+  isAnalyzing?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isRendering, setIsRendering] = useState(true);
@@ -171,25 +187,115 @@ function ClientRenderedPage({
         </div>
       </div>
 
+      {/* Analysis Results Badge */}
+      {analysisResult?.success && (
+        <div style={{
+          position: 'absolute',
+          top: '8px',
+          right: '8px',
+          background: '#10b981',
+          color: 'white',
+          fontSize: '10px',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+        }}>
+          <svg style={{ width: '12px', height: '12px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          AI Analyzed
+        </div>
+      )}
+
       {/* Actions */}
-      <div style={{ padding: '12px', display: 'flex', gap: '8px' }}>
-        <button
-          onClick={() => imageDataUrl && onExportToMap(imageDataUrl)}
-          disabled={!imageDataUrl}
-          style={{
-            flex: 1,
-            padding: '8px 12px',
-            background: imageDataUrl ? '#3b82f6' : '#9ca3af',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: imageDataUrl ? 'pointer' : 'not-allowed',
-          }}
-        >
-          Export to Map
-        </button>
+      <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => imageDataUrl && onExportToMap(imageDataUrl)}
+            disabled={!imageDataUrl}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              background: imageDataUrl ? '#3b82f6' : '#9ca3af',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: imageDataUrl ? 'pointer' : 'not-allowed',
+            }}
+          >
+            Export to Map
+          </button>
+        </div>
+        {analysisResult?.success ? (
+          <button
+            onClick={onViewResults}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+            }}
+          >
+            <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            View Results ({analysisResult.areas?.length || 0} areas)
+          </button>
+        ) : (
+          <button
+            onClick={() => imageDataUrl && onAnalyze(imageDataUrl, pageNumber)}
+            disabled={!imageDataUrl || isAnalyzing}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              background: isAnalyzing ? '#f59e0b' : (imageDataUrl ? '#8b5cf6' : '#9ca3af'),
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: (!imageDataUrl || isAnalyzing) ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+            }}
+          >
+            {isAnalyzing ? (
+              <>
+                <div style={{
+                  width: '14px',
+                  height: '14px',
+                  border: '2px solid white',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                }} />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                Analyze with AI
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -277,12 +383,377 @@ function ServerRenderedPage({
   );
 }
 
+// Analysis Results Panel Component
+function AnalysisResultsPanel({
+  result,
+  onClose,
+  onApplyToEstimate,
+}: {
+  result: BlueprintAnalysisResult;
+  onClose: () => void;
+  onApplyToEstimate: (items: { areas: DetectedArea[]; dimensions: DetectedDimension[]; materials: DetectedMaterial[] }) => void;
+}) {
+  const [selectedAreas, setSelectedAreas] = useState<Set<string>>(new Set(result.areas?.map(a => a.id) || []));
+  const [selectedDimensions, setSelectedDimensions] = useState<Set<string>>(new Set(result.dimensions?.map(d => d.id) || []));
+  const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set(result.materials?.map(m => m.id) || []));
+
+  const toggleSelection = (id: string, set: Set<string>, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => {
+    const newSet = new Set(set);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setter(newSet);
+  };
+
+  const handleApply = () => {
+    onApplyToEstimate({
+      areas: result.areas?.filter(a => selectedAreas.has(a.id)) || [],
+      dimensions: result.dimensions?.filter(d => selectedDimensions.has(d.id)) || [],
+      materials: result.materials?.filter(m => selectedMaterials.has(m.id)) || [],
+    });
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      right: 0,
+      width: '400px',
+      height: '100vh',
+      background: 'white',
+      borderLeft: '1px solid #e5e7eb',
+      boxShadow: '-4px 0 6px -1px rgba(0, 0, 0, 0.1)',
+      zIndex: 50,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '16px 20px',
+        borderBottom: '1px solid #e5e7eb',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        background: '#f9fafb',
+      }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#111827' }}>AI Analysis Results</h3>
+          <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
+            Page {result.pageNumber} - {result.processingTimeMs}ms
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            padding: '8px',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            color: '#6b7280',
+          }}
+        >
+          <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
+        {/* Summary */}
+        {result.summary && (
+          <div style={{
+            padding: '12px',
+            background: '#eff6ff',
+            borderRadius: '8px',
+            marginBottom: '16px',
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: 500, color: '#1d4ed8', marginBottom: '4px' }}>Summary</div>
+            <div style={{ fontSize: '13px', color: '#1e40af' }}>{result.summary}</div>
+          </div>
+        )}
+
+        {/* Scale Info */}
+        {result.scale?.detected && (
+          <div style={{
+            padding: '12px',
+            background: '#f0fdf4',
+            borderRadius: '8px',
+            marginBottom: '16px',
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: 500, color: '#166534', marginBottom: '4px' }}>Scale Detected</div>
+            <div style={{ fontSize: '13px', color: '#15803d' }}>
+              {result.scale.scaleText} ({result.scale.pixelsPerFoot} px/ft)
+              <span style={{ marginLeft: '8px', opacity: 0.7 }}>
+                {Math.round((result.scale.confidence || 0) * 100)}% confidence
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Areas */}
+        {result.areas && result.areas.length > 0 && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '8px',
+            }}>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                Areas ({result.areas.length})
+              </h4>
+              <button
+                onClick={() => setSelectedAreas(selectedAreas.size === result.areas!.length ? new Set() : new Set(result.areas!.map(a => a.id)))}
+                style={{
+                  fontSize: '11px',
+                  color: '#3b82f6',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {selectedAreas.size === result.areas.length ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {result.areas.map((area) => (
+                <label
+                  key={area.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    padding: '10px 12px',
+                    background: selectedAreas.has(area.id) ? '#eff6ff' : '#f9fafb',
+                    border: `1px solid ${selectedAreas.has(area.id) ? '#93c5fd' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedAreas.has(area.id)}
+                    onChange={() => toggleSelection(area.id, selectedAreas, setSelectedAreas)}
+                    style={{ marginTop: '2px' }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>
+                      {area.label || area.subType || area.type}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                      {area.areaSqFt ? `${area.areaSqFt} SF` : 'Area TBD'}
+                      <span style={{ marginLeft: '8px' }}>{Math.round((area.confidence || 0) * 100)}%</span>
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Dimensions */}
+        {result.dimensions && result.dimensions.length > 0 && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '8px',
+            }}>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                Dimensions ({result.dimensions.length})
+              </h4>
+              <button
+                onClick={() => setSelectedDimensions(selectedDimensions.size === result.dimensions!.length ? new Set() : new Set(result.dimensions!.map(d => d.id)))}
+                style={{
+                  fontSize: '11px',
+                  color: '#3b82f6',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {selectedDimensions.size === result.dimensions.length ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {result.dimensions.map((dim) => (
+                <label
+                  key={dim.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    padding: '10px 12px',
+                    background: selectedDimensions.has(dim.id) ? '#fef3c7' : '#f9fafb',
+                    border: `1px solid ${selectedDimensions.has(dim.id) ? '#fcd34d' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedDimensions.has(dim.id)}
+                    onChange={() => toggleSelection(dim.id, selectedDimensions, setSelectedDimensions)}
+                    style={{ marginTop: '2px' }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>
+                      {dim.text} ({dim.value} {dim.unit})
+                    </div>
+                    {dim.measures && (
+                      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                        {dim.measures}
+                      </div>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Materials */}
+        {result.materials && result.materials.length > 0 && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '8px',
+            }}>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                Materials ({result.materials.length})
+              </h4>
+              <button
+                onClick={() => setSelectedMaterials(selectedMaterials.size === result.materials!.length ? new Set() : new Set(result.materials!.map(m => m.id)))}
+                style={{
+                  fontSize: '11px',
+                  color: '#3b82f6',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {selectedMaterials.size === result.materials.length ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {result.materials.map((mat) => (
+                <label
+                  key={mat.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    padding: '10px 12px',
+                    background: selectedMaterials.has(mat.id) ? '#fce7f3' : '#f9fafb',
+                    border: `1px solid ${selectedMaterials.has(mat.id) ? '#f9a8d4' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedMaterials.has(mat.id)}
+                    onChange={() => toggleSelection(mat.id, selectedMaterials, setSelectedMaterials)}
+                    style={{ marginTop: '2px' }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>
+                      {mat.material}
+                    </div>
+                    {mat.appliesTo && (
+                      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                        Applies to: {mat.appliesTo}
+                      </div>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Footprint Info */}
+        {result.footprint && (
+          <div style={{
+            padding: '12px',
+            background: '#faf5ff',
+            borderRadius: '8px',
+            marginBottom: '16px',
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: 500, color: '#7c3aed', marginBottom: '4px' }}>Building Footprint</div>
+            <div style={{ fontSize: '13px', color: '#6d28d9' }}>
+              {result.footprint.widthFt && result.footprint.depthFt
+                ? `${result.footprint.widthFt}' x ${result.footprint.depthFt}'`
+                : 'Footprint detected'}
+              <span style={{ marginLeft: '8px', opacity: 0.7 }}>
+                {Math.round((result.footprint.confidence || 0) * 100)}% confidence
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        padding: '16px 20px',
+        borderTop: '1px solid #e5e7eb',
+        background: '#f9fafb',
+        display: 'flex',
+        gap: '12px',
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            flex: 1,
+            padding: '10px 16px',
+            background: 'white',
+            color: '#374151',
+            border: '1px solid #d1d5db',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleApply}
+          style={{
+            flex: 1,
+            padding: '10px 16px',
+            background: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >
+          Apply to Estimate
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function BlueprintDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DocumentData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<Map<number, BlueprintAnalysisResult>>(new Map());
+  const [analyzingPage, setAnalyzingPage] = useState<number | null>(null);
+  const [showResultsPanel, setShowResultsPanel] = useState<number | null>(null);
   const router = useRouter();
 
   const setPages = useBlueprintStore((s) => s.setPages);
@@ -359,6 +830,65 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
 
     sessionStorage.setItem('blueprintOverlay', JSON.stringify(exportData));
     router.push('/site?mode=overlay');
+  }, [documentId, router]);
+
+  const handleAnalyze = useCallback(async (imageDataUrl: string, pageNumber: number) => {
+    if (!documentId) return;
+
+    setAnalyzingPage(pageNumber);
+
+    try {
+      const response = await fetch('/api/blueprint/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId,
+          pageNumber,
+          imageDataUrl,
+          analysisType: 'full',
+        }),
+      });
+
+      const result: BlueprintAnalysisResult = await response.json();
+
+      if (result.success) {
+        setAnalysisResults((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(pageNumber, result);
+          return newMap;
+        });
+        setShowResultsPanel(pageNumber);
+      } else {
+        console.error('Analysis failed:', result.error);
+        alert(`Analysis failed: ${result.error}`);
+      }
+    } catch (err) {
+      console.error('Analysis request failed:', err);
+      alert('Failed to analyze blueprint. Please try again.');
+    } finally {
+      setAnalyzingPage(null);
+    }
+  }, [documentId]);
+
+  const handleApplyToEstimate = useCallback((items: {
+    areas: DetectedArea[];
+    dimensions: DetectedDimension[];
+    materials: DetectedMaterial[];
+  }) => {
+    // Store the selected items for use in the site page
+    const exportData = {
+      documentId,
+      areas: items.areas,
+      dimensions: items.dimensions,
+      materials: items.materials,
+      timestamp: Date.now(),
+    };
+
+    sessionStorage.setItem('blueprintAnalysis', JSON.stringify(exportData));
+    setShowResultsPanel(null);
+
+    // Optionally navigate to the site page to apply measurements
+    router.push('/site?mode=analysis');
   }, [documentId, router]);
 
   if (isLoading) {
@@ -525,11 +1055,16 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
                   key={page.id}
                   pdfUrl={pdfUrl}
                   pageNumber={page.page_number}
+                  documentId={documentId || ''}
                   onExportToMap={(imageDataUrl) => handleExportToMap({
                     imageDataUrl,
                     pageNumber: page.page_number,
                     pageId: page.id,
                   })}
+                  onAnalyze={handleAnalyze}
+                  onViewResults={() => setShowResultsPanel(page.page_number)}
+                  analysisResult={analysisResults.get(page.page_number)}
+                  isAnalyzing={analyzingPage === page.page_number}
                 />
               ))
             ) : (
@@ -550,6 +1085,15 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
           </div>
         )}
       </div>
+
+      {/* Analysis Results Panel */}
+      {showResultsPanel !== null && analysisResults.has(showResultsPanel) && (
+        <AnalysisResultsPanel
+          result={analysisResults.get(showResultsPanel)!}
+          onClose={() => setShowResultsPanel(null)}
+          onApplyToEstimate={handleApplyToEstimate}
+        />
+      )}
 
       <style>{`
         @keyframes spin {
