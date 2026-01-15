@@ -23,6 +23,8 @@ export { roofingConfig, default as roofing } from './roofing';
 export { concreteConfig, default as concrete } from './concrete';
 export { landscapingConfig, default as landscaping } from './landscaping';
 export { generalContractorConfig, default as generalContractor } from './general-contractor';
+export { fencingConfig, default as fencing } from './fencing';
+export { paintingConfig, default as painting } from './painting';
 
 // All configs as a map
 import { sealingStripingConfig } from './sealing-striping';
@@ -30,6 +32,8 @@ import { roofingConfig } from './roofing';
 import { concreteConfig } from './concrete';
 import { landscapingConfig } from './landscaping';
 import { generalContractorConfig } from './general-contractor';
+import { fencingConfig } from './fencing';
+import { paintingConfig } from './painting';
 import type { IndustryConfig, Service } from './types';
 
 export const industries: Record<string, IndustryConfig> = {
@@ -38,6 +42,8 @@ export const industries: Record<string, IndustryConfig> = {
   'concrete': concreteConfig,
   'landscaping': landscapingConfig,
   'general-contractor': generalContractorConfig,
+  'fencing': fencingConfig,
+  'painting': paintingConfig,
 };
 
 /**
