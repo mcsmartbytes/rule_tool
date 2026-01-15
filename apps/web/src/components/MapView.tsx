@@ -653,7 +653,7 @@ export default function MapView({
           }, 'image/png');
         });
 
-        if (!dataUrl) return null;
+        if (!dataUrl || !bounds) return null;
 
         return {
           image: dataUrl,

@@ -1,57 +1,26 @@
 {
-  "name": "rule_tool",
+  "name": "rule-tool",
   "version": "0.1.0",
-  "description": "Site-first multi-trade estimating platform",
+  "description": "Site-first multi-trade estimating platform - Monorepo",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "vercel-build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "branch-help": "node scripts/branch-help.js",
-    "push-work": "node scripts/push-work.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.2",
-    "@mapbox/mapbox-gl-draw": "^1.4.3",
-    "@mapbox/mapbox-gl-geocoder": "^5.0.1",
-    "@sentry/nextjs": "^10.32.1",
-    "@supabase/supabase-js": "^2.45.0",
-    "@turf/turf": "^7.2.0",
-    "canvas": "^3.2.1",
-    "mapbox-gl": "^3.10.0",
-    "next": "^16.0.10",
-    "pdfjs-dist": "^5.4.530",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "sharp": "^0.34.5",
-    "zod": "^4.2.1",
-    "zustand": "^5.0.2"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "@jest/globals": "^30.2.0",
-    "@playwright/test": "^1.57.0",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.1",
-    "@types/jest": "^30.0.0",
-    "@types/mapbox__mapbox-gl-draw": "^1.4.7",
-    "@types/node": "^20.11.30",
-    "@types/react": "^18.2.66",
-    "@types/react-dom": "^18.2.22",
-    "autoprefixer": "^10.4.22",
-    "eslint": "^9.39.1",
-    "eslint-config-next": "15.1.6",
-    "jest": "^30.2.0",
-    "jest-environment-jsdom": "^30.2.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.17",
-    "ts-jest": "^29.4.6",
+    "turbo": "^2.5.3",
     "typescript": "^5.6.3"
+  },
+  "packageManager": "npm@10.0.0",
+  "engines": {
+    "node": ">=18"
   }
 }

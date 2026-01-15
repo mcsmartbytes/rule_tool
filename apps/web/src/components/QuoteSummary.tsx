@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usePricingStore } from '@/lib/pricing-store'
 import { useAppStore } from '@/lib/store'
 import { formatArea } from '@/lib/format'
+import type { ServiceType } from '@/lib/pricing-types'
 
 interface QuoteSummaryProps {
   onBuildQuote?: () => void
@@ -31,7 +32,7 @@ export default function QuoteSummary({ onBuildQuote, onSendQuote }: QuoteSummary
   let costEstimate = 0 // Cost before margin
   let minimumApplied = false
   let minimumAmount = 0
-  let activeService: typeof activeConfig.serviceTypes[0] | null = null
+  let activeService: ServiceType | null = null
 
   if (measurements && activeConfig) {
     const primaryAreaService = activeConfig.serviceTypes.find(s => s.pricingModel === 'area')
