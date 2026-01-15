@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { processPDF } from '@/lib/pdf/processor';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,39 +9,6 @@ const supabase = createClient(
 
 interface RouteParams {
   params: Promise<{ documentId: string }>;
-}
-
-// Simple PDF page count extraction without full rendering
-// Uses basic PDF parsing - page count is in the trailer/catalog
-async function getPageCountFromPDF(pdfBuffer: ArrayBuffer): Promise<number> {
-  const bytes = new Uint8Array(pdfBuffer);
-  const text = new TextDecoder('latin1').decode(bytes);
-
-  // Look for /Count in the page tree (most reliable)
-  const countMatches = text.match(/\/Count\s+(\d+)/g);
-  if (countMatches && countMatches.length > 0) {
-    // Get the largest count (the root page tree)
-    const counts = countMatches.map(m => {
-      const num = m.match(/\d+/);
-      return num ? parseInt(num[0], 10) : 0;
-    });
-    const maxCount = Math.max(...counts);
-    if (maxCount > 0) return maxCount;
-  }
-
-  // Fallback: count /Type /Page occurrences (less reliable but works)
-  const pageMatches = text.match(/\/Type\s*\/Page[^s]/g);
-  if (pageMatches) {
-    return pageMatches.length;
-  }
-
-  // Last resort: look for /N in linearized PDFs
-  const linearizedMatch = text.match(/\/N\s+(\d+)/);
-  if (linearizedMatch) {
-    return parseInt(linearizedMatch[1], 10);
-  }
-
-  return 0;
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -104,33 +72,84 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Convert Blob to ArrayBuffer
     const pdfBuffer = await pdfData.arrayBuffer();
 
-    // Get page count using simple parsing (no pdfjs worker needed)
+    // Process PDF - render all pages to images
     console.log(`Processing PDF: ${document.name} (${document.file_size} bytes)`);
-    const pageCount = await getPageCountFromPDF(pdfBuffer);
-    console.log(`Found ${pageCount} pages`);
 
-    if (pageCount === 0) {
+    let result;
+    try {
+      result = await processPDF(Buffer.from(pdfBuffer));
+    } catch (processError) {
+      console.error('PDF processing error:', processError);
       await supabase
         .from('pdf_documents')
-        .update({ status: 'error', metadata: { ...document.metadata, error: 'Could not determine page count' } })
+        .update({
+          status: 'error',
+          error_message: processError instanceof Error ? processError.message : 'Failed to render PDF pages'
+        })
         .eq('id', documentId);
       return NextResponse.json(
-        { error: 'Could not determine page count from PDF' },
+        { error: 'Failed to render PDF pages', details: processError instanceof Error ? processError.message : 'Unknown error' },
+        { status: 500 }
+      );
+    }
+
+    console.log(`Rendered ${result.pageCount} pages, uploading to storage...`);
+
+    if (result.pageCount === 0) {
+      await supabase
+        .from('pdf_documents')
+        .update({ status: 'error', error_message: 'PDF has no pages' })
+        .eq('id', documentId);
+      return NextResponse.json(
+        { error: 'PDF has no pages' },
         { status: 400 }
       );
     }
 
-    // Create placeholder page records (actual rendering happens client-side)
+    // Upload each page image and thumbnail to storage
     const pageRecords = [];
-    for (let i = 1; i <= pageCount; i++) {
+    for (const page of result.pages) {
+      const imagePath = `${documentId}/page-${page.pageNumber}.jpg`;
+      const thumbnailPath = `${documentId}/thumb-${page.pageNumber}.jpg`;
+
+      // Upload full-size image
+      const { error: imageError } = await supabase.storage
+        .from('pdf-pages')
+        .upload(imagePath, page.imageBuffer, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (imageError) {
+        console.error(`Failed to upload page ${page.pageNumber} image:`, imageError);
+        continue;
+      }
+
+      // Upload thumbnail
+      const { error: thumbError } = await supabase.storage
+        .from('pdf-pages')
+        .upload(thumbnailPath, page.thumbnailBuffer, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (thumbError) {
+        console.error(`Failed to upload page ${page.pageNumber} thumbnail:`, thumbError);
+      }
+
       pageRecords.push({
         document_id: documentId,
-        page_number: i,
-        image_path: '', // Will be rendered client-side
-        thumbnail_path: null,
-        metadata: {},
+        page_number: page.pageNumber,
+        image_path: imagePath,
+        thumbnail_path: thumbError ? null : thumbnailPath,
+        metadata: {
+          width: page.width,
+          height: page.height,
+        },
       });
     }
+
+    console.log(`Uploaded ${pageRecords.length} pages to storage`);
 
     // Insert page records into database
     if (pageRecords.length > 0) {
@@ -148,11 +167,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .from('pdf_documents')
       .update({
         status: 'ready',
-        page_count: pageCount,
+        page_count: result.pageCount,
         metadata: {
           ...document.metadata,
+          ...result.metadata,
           processedAt: new Date().toISOString(),
-          renderMode: 'client-side',
+          renderMode: 'server-side',
         },
       })
       .eq('id', documentId);
@@ -164,9 +184,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       success: true,
       documentId,
-      pageCount,
-      renderMode: 'client-side',
-      message: 'Document processed. Pages will render in browser.',
+      pageCount: result.pageCount,
+      pagesUploaded: pageRecords.length,
+      message: 'Document processed and pages uploaded to storage.',
     });
 
   } catch (error) {
