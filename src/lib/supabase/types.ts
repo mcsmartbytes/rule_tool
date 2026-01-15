@@ -408,6 +408,50 @@ export type PDFPageUpdate = Partial<PDFPageInsert>;
 export type BlueprintFeatureUpdate = Partial<BlueprintFeatureInsert>;
 
 // ============================================
+// Site Media Types (Photos/Videos)
+// ============================================
+
+export type SiteMediaType = 'photo' | 'video' | 'panorama' | 'drone';
+
+export type SiteMediaCategory =
+  | 'overview'
+  | 'damage'
+  | 'existing-condition'
+  | 'measurement-reference'
+  | 'progress'
+  | 'completion'
+  | 'before'
+  | 'after'
+  | 'other';
+
+export interface SiteMedia {
+  id: string;
+  site_id: string;
+  uploaded_by: string | null;
+  media_type: SiteMediaType;
+  category: SiteMediaCategory;
+  storage_path: string;
+  thumbnail_path: string | null;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  width: number | null;
+  height: number | null;
+  duration: number | null; // For videos, in seconds
+  caption: string | null;
+  location: {
+    lat: number;
+    lng: number;
+  } | null;
+  taken_at: string | null; // When photo/video was captured (from EXIF)
+  metadata: Json;
+  created_at: string;
+}
+
+export type SiteMediaInsert = Omit<SiteMedia, 'id' | 'created_at'>;
+export type SiteMediaUpdate = Partial<SiteMediaInsert>;
+
+// ============================================
 // Bid Dashboard Types
 // ============================================
 

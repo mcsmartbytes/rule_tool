@@ -18,6 +18,7 @@ import { AIDetectionButton } from '@/components/AIDetectionButton';
 import { AIReviewPanel } from '@/components/AIReviewPanel';
 import type { AIDetectedFeature } from '@/lib/ai/types';
 import { usePricingStore } from '@/lib/pricing-store';
+import { SiteMediaPanel } from '@/components/panels/SiteMediaPanel';
 
 // Blueprint overlay data structure
 export interface BlueprintOverlay {
@@ -48,6 +49,9 @@ function SitePageInner() {
   // Blueprint overlay state
   const [blueprintOverlay, setBlueprintOverlay] = useState<BlueprintOverlay | null>(null);
   const [overlayOpacity, setOverlayOpacity] = useState(0.7);
+
+  // Site media panel state
+  const [showMediaPanel, setShowMediaPanel] = useState(false);
 
   const site = useSiteStore((s) => s.site);
   const setSite = useSiteStore((s) => s.setSite);
@@ -366,6 +370,27 @@ function SitePageInner() {
             </svg>
             Blueprints
           </Link>
+          <button
+            onClick={() => setShowMediaPanel(!showMediaPanel)}
+            style={{
+              padding: '6px 12px',
+              background: showMediaPanel ? '#10b981' : '#6b7280',
+              color: 'white',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Photos
+          </button>
           <AIDetectionButton
             onCaptureRequest={handleCaptureRequest}
             onDetectionComplete={handleDetectionComplete}
@@ -488,6 +513,21 @@ function SitePageInner() {
 
       {/* Object Classifier Modal */}
       <ObjectClassifier />
+
+      {/* Floating Site Media Panel */}
+      {showMediaPanel && site?.id && (
+        <div className="floating-media-panel">
+          <div className="floating-panel-header">
+            <span>Site Photos & Videos</span>
+            <button onClick={() => setShowMediaPanel(false)} className="floating-panel-close">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <SiteMediaPanel siteId={site.id} />
+        </div>
+      )}
     </div>
   );
 }
