@@ -6,8 +6,36 @@ import { useRouter } from 'next/navigation';
 import { useBlueprintStore } from '@/lib/blueprint/store';
 import type { PDFDocument } from '@/lib/supabase/types';
 
-// Document card
-function DocumentCard({ doc, onSelect }: { doc: PDFDocument; onSelect: () => void }) {
+// Document card with delete button
+function DocumentCard({
+  doc,
+  onSelect,
+  onDelete,
+  isDeleting,
+}: {
+  doc: PDFDocument;
+  onSelect: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+}) {
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowConfirm(true);
+  };
+
+  const handleConfirmDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete();
+    setShowConfirm(false);
+  };
+
+  const handleCancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowConfirm(false);
+  };
+
   return (
     <div
       onClick={onSelect}
@@ -18,6 +46,9 @@ function DocumentCard({ doc, onSelect }: { doc: PDFDocument; onSelect: () => voi
         padding: '16px',
         cursor: 'pointer',
         transition: 'all 0.2s',
+        opacity: isDeleting ? 0.5 : 1,
+        pointerEvents: isDeleting ? 'none' : 'auto',
+        position: 'relative',
       }}
       onMouseOver={(e) => {
         e.currentTarget.style.borderColor = '#93c5fd';
@@ -28,6 +59,61 @@ function DocumentCard({ doc, onSelect }: { doc: PDFDocument; onSelect: () => voi
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
+      {/* Delete confirmation overlay */}
+      {showConfirm && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(255,255,255,0.95)',
+            borderRadius: '8px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            zIndex: 10,
+          }}
+        >
+          <p style={{ color: '#374151', fontSize: '14px', textAlign: 'center', margin: 0 }}>
+            Delete this document?
+          </p>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleConfirmDelete}
+              style={{
+                padding: '6px 16px',
+                background: '#dc2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Delete
+            </button>
+            <button
+              onClick={handleCancelDelete}
+              style={{
+                padding: '6px 16px',
+                background: '#e5e7eb',
+                color: '#374151',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
         <div style={{ padding: '8px', background: '#fee2e2', borderRadius: '8px' }}>
           <svg style={{ width: '32px', height: '32px', color: '#dc2626' }} fill="currentColor" viewBox="0 0 24 24">
@@ -56,6 +142,33 @@ function DocumentCard({ doc, onSelect }: { doc: PDFDocument; onSelect: () => voi
             {new Date(doc.created_at).toLocaleDateString()}
           </p>
         </div>
+
+        {/* Delete button */}
+        <button
+          onClick={handleDeleteClick}
+          title="Delete document"
+          style={{
+            padding: '8px',
+            background: 'transparent',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            color: '#9ca3af',
+            transition: 'all 0.2s',
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = '#fee2e2';
+            e.currentTarget.style.color = '#dc2626';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = '#9ca3af';
+          }}
+        >
+          <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
       </div>
     </div>
   );
@@ -154,11 +267,13 @@ function UploadDropzone({ onUpload, isUploading, progress }: {
 
 export default function BlueprintPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   const documents = useBlueprintStore((s) => s.documents);
   const setDocuments = useBlueprintStore((s) => s.setDocuments);
   const addDocument = useBlueprintStore((s) => s.addDocument);
+  const removeDocument = useBlueprintStore((s) => s.removeDocument);
   const setActiveDocument = useBlueprintStore((s) => s.setActiveDocument);
   const isUploading = useBlueprintStore((s) => s.isUploading);
   const uploadProgress = useBlueprintStore((s) => s.uploadProgress);
@@ -229,6 +344,33 @@ export default function BlueprintPage() {
     setActiveDocument(doc.id);
     router.push(`/blueprint/${doc.id}`);
   }, [setActiveDocument, router]);
+
+  const handleDeleteDocument = useCallback(async (doc: PDFDocument) => {
+    setDeletingIds((prev) => new Set(prev).add(doc.id));
+
+    try {
+      const response = await fetch(`/api/pdf/${doc.id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        removeDocument(doc.id);
+      } else {
+        console.error('Delete failed:', data.error);
+        alert('Failed to delete document: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Delete failed:', error);
+      alert('Failed to delete document');
+    } finally {
+      setDeletingIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(doc.id);
+        return newSet;
+      });
+    }
+  }, [removeDocument]);
 
   if (isLoading) {
     return (
@@ -312,6 +454,8 @@ export default function BlueprintPage() {
                   key={doc.id}
                   doc={doc}
                   onSelect={() => handleSelectDocument(doc)}
+                  onDelete={() => handleDeleteDocument(doc)}
+                  isDeleting={deletingIds.has(doc.id)}
                 />
               ))}
             </div>
