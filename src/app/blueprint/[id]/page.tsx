@@ -1,10 +1,16 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useBlueprintStore } from '@/lib/blueprint/store';
 import type { PDFDocument, PDFPage } from '@/lib/supabase/types';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Set worker path for pdf.js
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+}
 
 interface PageWithUrls extends PDFPage {
   imageUrl: string | null;
@@ -14,18 +20,87 @@ interface PageWithUrls extends PDFPage {
 interface DocumentData {
   document: PDFDocument;
   pages: PageWithUrls[];
+  pdfUrl?: string;
+  renderMode?: 'client-side' | 'server-side';
 }
 
-// Page card component
-function PageCard({
-  page,
+// Client-side PDF page renderer
+function ClientRenderedPage({
+  pdfUrl,
   pageNumber,
   onExportToMap,
 }: {
-  page: PageWithUrls;
+  pdfUrl: string;
   pageNumber: number;
-  onExportToMap: () => void;
+  onExportToMap: (imageDataUrl: string) => void;
 }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isRendering, setIsRendering] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function renderPage() {
+      if (!canvasRef.current) return;
+
+      try {
+        setIsRendering(true);
+        setError(null);
+
+        // Load the PDF
+        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        const pdf = await loadingTask.promise;
+
+        if (cancelled) return;
+
+        // Get the page
+        const page = await pdf.getPage(pageNumber);
+
+        if (cancelled) return;
+
+        // Calculate scale for thumbnail (300px width)
+        const viewport = page.getViewport({ scale: 1 });
+        const scale = 300 / viewport.width;
+        const scaledViewport = page.getViewport({ scale });
+
+        // Set canvas dimensions
+        const canvas = canvasRef.current;
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
+
+        // Render the page
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Failed to get canvas context');
+
+        await page.render({
+          canvasContext: context,
+          viewport: scaledViewport,
+        }).promise;
+
+        if (cancelled) return;
+
+        // Store the data URL for export
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setImageDataUrl(dataUrl);
+        setIsRendering(false);
+      } catch (err) {
+        if (!cancelled) {
+          console.error(`Failed to render page ${pageNumber}:`, err);
+          setError('Failed to render');
+          setIsRendering(false);
+        }
+      }
+    }
+
+    renderPage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfUrl, pageNumber]);
+
   return (
     <div
       style={{
@@ -44,22 +119,39 @@ function PageCard({
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
+          overflow: 'hidden',
         }}
       >
-        {page.thumbnailUrl ? (
-          <img
-            src={page.thumbnailUrl}
-            alt={`Page ${pageNumber}`}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          />
-        ) : (
+        {isRendering ? (
           <div style={{ textAlign: 'center', color: '#9ca3af' }}>
-            <svg style={{ width: '48px', height: '48px', margin: '0 auto' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p style={{ fontSize: '12px', marginTop: '8px' }}>Page {pageNumber}</p>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                margin: '0 auto 8px',
+                border: '3px solid #3b82f6',
+                borderTopColor: 'transparent',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+              }}
+            />
+            <p style={{ fontSize: '12px' }}>Rendering...</p>
           </div>
-        )}
+        ) : error ? (
+          <div style={{ textAlign: 'center', color: '#ef4444' }}>
+            <p style={{ fontSize: '12px' }}>{error}</p>
+          </div>
+        ) : null}
+
+        <canvas
+          ref={canvasRef}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'contain',
+            display: isRendering || error ? 'none' : 'block',
+          }}
+        />
 
         {/* Page number badge */}
         <div
@@ -79,6 +171,89 @@ function PageCard({
       </div>
 
       {/* Actions */}
+      <div style={{ padding: '12px', display: 'flex', gap: '8px' }}>
+        <button
+          onClick={() => imageDataUrl && onExportToMap(imageDataUrl)}
+          disabled={!imageDataUrl}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            background: imageDataUrl ? '#3b82f6' : '#9ca3af',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: imageDataUrl ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Export to Map
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Server-rendered page card (for pre-rendered images)
+function ServerRenderedPage({
+  page,
+  pageNumber,
+  onExportToMap,
+}: {
+  page: PageWithUrls;
+  pageNumber: number;
+  onExportToMap: () => void;
+}) {
+  return (
+    <div
+      style={{
+        background: 'white',
+        borderRadius: '8px',
+        border: '1px solid #e5e7eb',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          aspectRatio: '8.5/11',
+          background: '#f3f4f6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+        }}
+      >
+        {page.thumbnailUrl || page.imageUrl ? (
+          <img
+            src={page.thumbnailUrl || page.imageUrl || ''}
+            alt={`Page ${pageNumber}`}
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          />
+        ) : (
+          <div style={{ textAlign: 'center', color: '#9ca3af' }}>
+            <svg style={{ width: '48px', height: '48px', margin: '0 auto' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p style={{ fontSize: '12px', marginTop: '8px' }}>Page {pageNumber}</p>
+          </div>
+        )}
+
+        <div
+          style={{
+            position: 'absolute',
+            top: '8px',
+            left: '8px',
+            background: 'rgba(0,0,0,0.7)',
+            color: 'white',
+            fontSize: '12px',
+            padding: '4px 8px',
+            borderRadius: '4px',
+          }}
+        >
+          Page {pageNumber}
+        </div>
+      </div>
+
       <div style={{ padding: '12px', display: 'flex', gap: '8px' }}>
         <button
           onClick={onExportToMap}
@@ -173,18 +348,17 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
     }
   }, [documentId]);
 
-  const handleExportToMap = useCallback((page: PageWithUrls) => {
+  const handleExportToMap = useCallback((pageData: { imageUrl?: string; imageDataUrl?: string; pageNumber: number; pageId?: string }) => {
     const exportData = {
-      pageId: page.id,
-      documentId: page.document_id,
-      imageUrl: page.imageUrl,
-      pageNumber: page.page_number,
-      category: page.category,
+      pageId: pageData.pageId,
+      documentId: documentId,
+      imageUrl: pageData.imageUrl || pageData.imageDataUrl,
+      pageNumber: pageData.pageNumber,
     };
 
     sessionStorage.setItem('blueprintOverlay', JSON.stringify(exportData));
     router.push('/site?mode=overlay');
-  }, [router]);
+  }, [documentId, router]);
 
   if (isLoading) {
     return (
@@ -232,7 +406,8 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
     );
   }
 
-  const { document, pages } = data;
+  const { document, pages, pdfUrl, renderMode } = data;
+  const useClientRendering = renderMode === 'client-side' && pdfUrl;
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
@@ -268,6 +443,7 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
               <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0' }}>
                 {document.page_count ? `${document.page_count} pages` : 'Processing...'}
                 {document.status === 'error' && ' - Error'}
+                {useClientRendering && ' (rendering in browser)'}
               </p>
             </div>
           </div>
@@ -341,17 +517,45 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
             gap: '16px',
           }}>
-            {pages.map((page) => (
-              <PageCard
-                key={page.id}
-                page={page}
-                pageNumber={page.page_number}
-                onExportToMap={() => handleExportToMap(page)}
-              />
-            ))}
+            {useClientRendering ? (
+              // Client-side rendering with pdf.js
+              pages.map((page) => (
+                <ClientRenderedPage
+                  key={page.id}
+                  pdfUrl={pdfUrl}
+                  pageNumber={page.page_number}
+                  onExportToMap={(imageDataUrl) => handleExportToMap({
+                    imageDataUrl,
+                    pageNumber: page.page_number,
+                    pageId: page.id,
+                  })}
+                />
+              ))
+            ) : (
+              // Server-rendered images
+              pages.map((page) => (
+                <ServerRenderedPage
+                  key={page.id}
+                  page={page}
+                  pageNumber={page.page_number}
+                  onExportToMap={() => handleExportToMap({
+                    imageUrl: page.imageUrl || undefined,
+                    pageNumber: page.page_number,
+                    pageId: page.id,
+                  })}
+                />
+              ))
+            )}
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

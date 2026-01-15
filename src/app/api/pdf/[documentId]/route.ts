@@ -40,16 +40,32 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       console.error('Pages query error:', pagesError);
     }
 
-    // Generate signed URLs for page images
+    // Generate signed URL for the PDF document (for client-side rendering)
+    let pdfUrl = null;
+    if (document.storage_path) {
+      const { data: pdfUrlData } = await supabase.storage
+        .from('pdf-documents')
+        .createSignedUrl(document.storage_path, 3600); // 1 hour
+      pdfUrl = pdfUrlData?.signedUrl;
+    }
+
+    // Check if pages use client-side rendering
+    const isClientSideRender = pages?.some(p =>
+      p.image_path?.startsWith('client-render:') ||
+      p.metadata?.renderMode === 'client-side'
+    );
+
+    // Generate signed URLs for page images (if server-rendered)
     const pagesWithUrls = await Promise.all(
       (pages || []).map(async (page) => {
         let imageUrl = null;
         let thumbnailUrl = null;
 
-        if (page.image_path) {
+        // Skip URL generation for client-side rendered pages
+        if (page.image_path && !page.image_path.startsWith('client-render:')) {
           const { data: imageData } = await supabase.storage
             .from('pdf-pages')
-            .createSignedUrl(page.image_path, 3600); // 1 hour
+            .createSignedUrl(page.image_path, 3600);
           imageUrl = imageData?.signedUrl;
         }
 
@@ -72,6 +88,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       success: true,
       document,
       pages: pagesWithUrls,
+      pdfUrl,
+      renderMode: isClientSideRender ? 'client-side' : 'server-side',
     });
 
   } catch (error) {

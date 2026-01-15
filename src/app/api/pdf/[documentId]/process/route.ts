@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { processPDF } from '@/lib/pdf/processor';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,6 +8,38 @@ const supabase = createClient(
 
 interface RouteParams {
   params: Promise<{ documentId: string }>;
+}
+
+// Simple PDF page count extraction without rendering
+// Server-side rendering doesn't work on Vercel - pages render client-side
+async function getPageCountFromPDF(pdfBuffer: ArrayBuffer): Promise<number> {
+  const bytes = new Uint8Array(pdfBuffer);
+  const text = new TextDecoder('latin1').decode(bytes);
+
+  // Look for /Count in the page tree (most reliable)
+  const countMatches = text.match(/\/Count\s+(\d+)/g);
+  if (countMatches && countMatches.length > 0) {
+    const counts = countMatches.map(m => {
+      const num = m.match(/\d+/);
+      return num ? parseInt(num[0], 10) : 0;
+    });
+    const maxCount = Math.max(...counts);
+    if (maxCount > 0) return maxCount;
+  }
+
+  // Fallback: count /Type /Page occurrences
+  const pageMatches = text.match(/\/Type\s*\/Page[^s]/g);
+  if (pageMatches) {
+    return pageMatches.length;
+  }
+
+  // Last resort: look for /N in linearized PDFs
+  const linearizedMatch = text.match(/\/N\s+(\d+)/);
+  if (linearizedMatch) {
+    return parseInt(linearizedMatch[1], 10);
+  }
+
+  return 0;
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -29,7 +60,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Check if already processed successfully
+    // Check if already processed
     if (document.status === 'ready' && document.page_count) {
       return NextResponse.json({
         success: true,
@@ -38,7 +69,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    // Clear any existing pages if retrying after error
+    // Clear existing pages if retrying
     if (document.status === 'error') {
       await supabase
         .from('pdf_pages')
@@ -46,7 +77,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         .eq('document_id', documentId);
     }
 
-    // Update status to processing and clear error
+    // Update status to processing
     await supabase
       .from('pdf_documents')
       .update({ status: 'processing', error_message: null })
@@ -61,7 +92,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       console.error('Download error:', downloadError);
       await supabase
         .from('pdf_documents')
-        .update({ status: 'error', metadata: { ...document.metadata, error: 'Failed to download PDF' } })
+        .update({ status: 'error', error_message: 'Failed to download PDF' })
         .eq('id', documentId);
       return NextResponse.json(
         { error: 'Failed to download PDF from storage' },
@@ -69,89 +100,35 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Convert Blob to ArrayBuffer
+    // Get page count
     const pdfBuffer = await pdfData.arrayBuffer();
-
-    // Process PDF - render all pages to images
     console.log(`Processing PDF: ${document.name} (${document.file_size} bytes)`);
+    const pageCount = await getPageCountFromPDF(pdfBuffer);
+    console.log(`Found ${pageCount} pages`);
 
-    let result;
-    try {
-      result = await processPDF(Buffer.from(pdfBuffer));
-    } catch (processError) {
-      console.error('PDF processing error:', processError);
+    if (pageCount === 0) {
       await supabase
         .from('pdf_documents')
-        .update({
-          status: 'error',
-          error_message: processError instanceof Error ? processError.message : 'Failed to render PDF pages'
-        })
+        .update({ status: 'error', error_message: 'Could not determine page count' })
         .eq('id', documentId);
       return NextResponse.json(
-        { error: 'Failed to render PDF pages', details: processError instanceof Error ? processError.message : 'Unknown error' },
-        { status: 500 }
-      );
-    }
-
-    console.log(`Rendered ${result.pageCount} pages, uploading to storage...`);
-
-    if (result.pageCount === 0) {
-      await supabase
-        .from('pdf_documents')
-        .update({ status: 'error', error_message: 'PDF has no pages' })
-        .eq('id', documentId);
-      return NextResponse.json(
-        { error: 'PDF has no pages' },
+        { error: 'Could not determine page count from PDF' },
         { status: 400 }
       );
     }
 
-    // Upload each page image and thumbnail to storage
+    // Create page records (images rendered client-side)
     const pageRecords = [];
-    for (const page of result.pages) {
-      const imagePath = `${documentId}/page-${page.pageNumber}.jpg`;
-      const thumbnailPath = `${documentId}/thumb-${page.pageNumber}.jpg`;
-
-      // Upload full-size image
-      const { error: imageError } = await supabase.storage
-        .from('pdf-pages')
-        .upload(imagePath, page.imageBuffer, {
-          contentType: 'image/jpeg',
-          upsert: true,
-        });
-
-      if (imageError) {
-        console.error(`Failed to upload page ${page.pageNumber} image:`, imageError);
-        continue;
-      }
-
-      // Upload thumbnail
-      const { error: thumbError } = await supabase.storage
-        .from('pdf-pages')
-        .upload(thumbnailPath, page.thumbnailBuffer, {
-          contentType: 'image/jpeg',
-          upsert: true,
-        });
-
-      if (thumbError) {
-        console.error(`Failed to upload page ${page.pageNumber} thumbnail:`, thumbError);
-      }
-
+    for (let i = 1; i <= pageCount; i++) {
       pageRecords.push({
         document_id: documentId,
-        page_number: page.pageNumber,
-        image_path: imagePath,
-        thumbnail_path: thumbError ? null : thumbnailPath,
-        metadata: {
-          width: page.width,
-          height: page.height,
-        },
+        page_number: i,
+        image_path: `client-render:${documentId}:${i}`, // Special marker for client-side rendering
+        thumbnail_path: null,
+        metadata: { renderMode: 'client-side' },
       });
     }
 
-    console.log(`Uploaded ${pageRecords.length} pages to storage`);
-
-    // Insert page records into database
     if (pageRecords.length > 0) {
       const { error: insertError } = await supabase
         .from('pdf_pages')
@@ -162,17 +139,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Update document with page count and status
+    // Update document status
     const { error: updateError } = await supabase
       .from('pdf_documents')
       .update({
         status: 'ready',
-        page_count: result.pageCount,
+        page_count: pageCount,
         metadata: {
           ...document.metadata,
-          ...result.metadata,
           processedAt: new Date().toISOString(),
-          renderMode: 'server-side',
+          renderMode: 'client-side',
         },
       })
       .eq('id', documentId);
@@ -184,25 +160,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       success: true,
       documentId,
-      pageCount: result.pageCount,
-      pagesUploaded: pageRecords.length,
-      message: 'Document processed and pages uploaded to storage.',
+      pageCount,
+      renderMode: 'client-side',
+      message: 'Document processed. Pages render in browser.',
     });
 
   } catch (error) {
     console.error('Processing error:', error);
-
-    // Update document status to error
     await supabase
       .from('pdf_documents')
       .update({
         status: 'error',
-        metadata: { error: error instanceof Error ? error.message : 'Processing failed' },
+        error_message: error instanceof Error ? error.message : 'Processing failed',
       })
       .eq('id', documentId);
 
     return NextResponse.json(
-      { error: 'Failed to process PDF', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to process PDF' },
       { status: 500 }
     );
   }
