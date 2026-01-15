@@ -250,7 +250,7 @@ export default function BlueprintPage() {
     } finally {
       setUploading(false, 0);
     }
-  }, [addDocument, setUploading, uploadProgress]);
+  }, [addDocument, router, setUploading, uploadProgress]);
 
   const handleSelectDocument = useCallback((doc: PDFDocument) => {
     setActiveDocument(doc.id);

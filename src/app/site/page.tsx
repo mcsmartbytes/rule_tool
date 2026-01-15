@@ -363,6 +363,7 @@ function SitePageInner() {
               captureRef={mapCaptureRef}
               onMapClick={placingBlueprint ? handleMapClick : undefined}
               blueprintOverlay={blueprintOverlay ? { ...blueprintOverlay, opacity: 0.6 } : null}
+              blueprintPlacementPoints={placingBlueprint ? blueprintCorners : []}
             />
           </ErrorBoundary>
 

@@ -31,9 +31,11 @@ export function BlueprintOverlayModal({
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [pages, setPages] = useState<PageWithUrls[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfUrlError, setPdfUrlError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processedInfo, setProcessedInfo] = useState<{ processedPages: number; totalPages: number | null } | null>(null);
 
   const selectedDoc = useMemo(() => docs.find((d) => d.id === selectedDocId) || null, [docs, selectedDocId]);
 
@@ -80,6 +82,10 @@ export function BlueprintOverlayModal({
         if (!cancelled) {
           setPages(data.pages || []);
           setPdfUrl(data.pdf_url || null);
+          setPdfUrlError(data.pdf_url_error || null);
+          const processedPages = Number(data?.document?.metadata?.processing?.processedPages || 0) || 0;
+          const totalPages = typeof data?.document?.page_count === 'number' ? data.document.page_count : null;
+          setProcessedInfo({ processedPages, totalPages });
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Failed to load pages';
@@ -114,6 +120,10 @@ export function BlueprintOverlayModal({
       if (data2.success) {
         setPages(data2.pages || []);
         setPdfUrl(data2.pdf_url || null);
+        setPdfUrlError(data2.pdf_url_error || null);
+        const processedPages = Number(data2?.document?.metadata?.processing?.processedPages || 0) || 0;
+        const totalPages = typeof data2?.document?.page_count === 'number' ? data2.document.page_count : null;
+        setProcessedInfo({ processedPages, totalPages });
       } else {
         throw new Error(data2.error || 'Failed to reload pages');
       }
@@ -169,6 +179,15 @@ export function BlueprintOverlayModal({
               </div>
             )}
 
+            {processedInfo && (
+              <div className="mt-2 text-xs text-gray-500">
+                Rendered pages: <span className="font-medium text-gray-700">{processedInfo.processedPages}</span>
+                {processedInfo.totalPages != null ? (
+                  <> / <span className="font-medium text-gray-700">{processedInfo.totalPages}</span></>
+                ) : null}
+              </div>
+            )}
+
             <div className="mt-3 flex flex-col gap-2">
               <button
                 onClick={triggerProcessing}
@@ -187,6 +206,11 @@ export function BlueprintOverlayModal({
                 >
                   Open PDF
                 </a>
+              )}
+              {!pdfUrl && pdfUrlError && (
+                <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">
+                  Cannot open PDF: {pdfUrlError}
+                </div>
               )}
             </div>
 

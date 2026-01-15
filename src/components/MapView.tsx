@@ -39,6 +39,7 @@ interface MapViewProps {
     corners: Array<[number, number]>;
     opacity?: number;
   } | null;
+  blueprintPlacementPoints?: Array<[number, number]>;
 }
 
 export default function MapView({
@@ -48,6 +49,7 @@ export default function MapView({
   captureRef,
   onMapClick,
   blueprintOverlay,
+  blueprintPlacementPoints = [],
 }: MapViewProps = {}) {
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const drawRef = useRef<MapboxDraw | null>(null)
@@ -87,6 +89,7 @@ export default function MapView({
   const [imageryLoading, setImageryLoading] = useState(false)
   const onMapClickRef = useRef<MapViewProps['onMapClick']>(onMapClick)
   const blueprintOverlayRef = useRef<MapViewProps['blueprintOverlay']>(blueprintOverlay || null)
+  const blueprintPlacementPointsRef = useRef<Array<[number, number]>>(blueprintPlacementPoints)
 
   useEffect(() => {
     setMounted(true)
@@ -103,6 +106,10 @@ export default function MapView({
   useEffect(() => {
     blueprintOverlayRef.current = blueprintOverlay || null
   }, [blueprintOverlay])
+
+  useEffect(() => {
+    blueprintPlacementPointsRef.current = blueprintPlacementPoints
+  }, [blueprintPlacementPoints])
 
   useEffect(() => {
     heightMeasurementsRef.current = heightMeasurements
@@ -828,6 +835,65 @@ export default function MapView({
       try { map.off('style.load', onStyleLoad) } catch {}
     }
   }, [mapReadyTick, blueprintOverlay])
+
+  // Render placement points while user is clicking corners
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !map.isStyleLoaded()) return
+
+    const sourceId = 'blueprint-placement-points-src'
+    const circleLayerId = 'blueprint-placement-points-circle'
+    const labelLayerId = 'blueprint-placement-points-label'
+
+    const pts = blueprintPlacementPointsRef.current || []
+    const geojson: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: pts.map((p, idx) => ({
+        type: 'Feature',
+        properties: { idx: String(idx + 1) },
+        geometry: { type: 'Point', coordinates: p },
+      })),
+    }
+
+    const src = map.getSource(sourceId) as mapboxgl.GeoJSONSource
+    if (src) {
+      src.setData(geojson)
+    } else {
+      map.addSource(sourceId, { type: 'geojson', data: geojson })
+      map.addLayer({
+        id: circleLayerId,
+        type: 'circle',
+        source: sourceId,
+        paint: {
+          'circle-color': '#2563eb',
+          'circle-radius': 7,
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 2,
+        },
+      })
+      map.addLayer({
+        id: labelLayerId,
+        type: 'symbol',
+        source: sourceId,
+        layout: {
+          'text-field': ['get', 'idx'],
+          'text-size': 12,
+          'text-offset': [0, 0],
+        },
+        paint: {
+          'text-color': '#ffffff',
+        },
+      })
+    }
+
+    return () => {
+      try {
+        if (map.getLayer(labelLayerId)) map.removeLayer(labelLayerId)
+        if (map.getLayer(circleLayerId)) map.removeLayer(circleLayerId)
+        if (map.getSource(sourceId)) map.removeSource(sourceId)
+      } catch {}
+    }
+  }, [mapReadyTick, blueprintPlacementPoints])
 
   // Render site objects on map with selection highlighting
   useEffect(() => {
