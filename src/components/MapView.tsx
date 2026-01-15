@@ -1754,13 +1754,14 @@ export default function MapView({
               startTransformY: overlayTransform.y,
             };
             const onMouseMove = (moveE: MouseEvent) => {
-              if (!overlayDragRef.current) return;
-              const dx = moveE.clientX - overlayDragRef.current.startX;
-              const dy = moveE.clientY - overlayDragRef.current.startY;
+              const dragState = overlayDragRef.current;
+              if (!dragState) return;
+              const dx = moveE.clientX - dragState.startX;
+              const dy = moveE.clientY - dragState.startY;
               setOverlayTransform((prev) => ({
                 ...prev,
-                x: overlayDragRef.current!.startTransformX + dx,
-                y: overlayDragRef.current!.startTransformY + dy,
+                x: dragState.startTransformX + dx,
+                y: dragState.startTransformY + dy,
               }));
             };
             const onMouseUp = () => {
