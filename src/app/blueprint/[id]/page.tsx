@@ -7,9 +7,9 @@ import { useBlueprintStore } from '@/lib/blueprint/store';
 import type { PDFDocument, PDFPage } from '@/lib/supabase/types';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Set worker path for pdf.js
+// Set worker path for pdf.js - use unpkg CDN which has all versions
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 }
 
 interface PageWithUrls extends PDFPage {
