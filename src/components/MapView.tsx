@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import mapboxgl, { type MapMouseEvent } from 'mapbox-gl'
 import { useAppStore } from '@/lib/store'
@@ -88,6 +88,11 @@ export default function MapView({
   const [imageryMode, setImageryMode] = useState<'mapbox' | 'google'>('mapbox')
   const [googleAttribution, setGoogleAttribution] = useState<string>('')
   const [imageryLoading, setImageryLoading] = useState(false)
+
+  // Blueprint overlay position and size state
+  const [overlayTransform, setOverlayTransform] = useState({ x: 0, y: 0, width: 400, height: 500, rotation: 0 })
+  const overlayDragRef = useRef<{ startX: number; startY: number; startTransformX: number; startTransformY: number } | null>(null)
+  const overlayResizeRef = useRef<{ startX: number; startY: number; startWidth: number; startHeight: number; corner: string } | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -1725,32 +1730,176 @@ export default function MapView({
       <div className="map-container">
         <div ref={containerRef} className="map-canvas" />
       </div>
-      {/* Blueprint Overlay Image */}
+      {/* Blueprint Overlay Image - Interactive */}
       {blueprintOverlay?.imageUrl && (
         <div
-          className="blueprint-overlay-image"
+          className="blueprint-overlay-container"
           style={{
             position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
+            left: `calc(50% + ${overlayTransform.x}px)`,
+            top: `calc(50% + ${overlayTransform.y}px)`,
+            transform: `translate(-50%, -50%) rotate(${overlayTransform.rotation}deg)`,
+            width: overlayTransform.width,
+            height: overlayTransform.height,
             zIndex: 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
+            cursor: 'move',
+          }}
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).classList.contains('resize-handle')) return;
+            e.preventDefault();
+            overlayDragRef.current = {
+              startX: e.clientX,
+              startY: e.clientY,
+              startTransformX: overlayTransform.x,
+              startTransformY: overlayTransform.y,
+            };
+            const onMouseMove = (moveE: MouseEvent) => {
+              if (!overlayDragRef.current) return;
+              const dx = moveE.clientX - overlayDragRef.current.startX;
+              const dy = moveE.clientY - overlayDragRef.current.startY;
+              setOverlayTransform((prev) => ({
+                ...prev,
+                x: overlayDragRef.current!.startTransformX + dx,
+                y: overlayDragRef.current!.startTransformY + dy,
+              }));
+            };
+            const onMouseUp = () => {
+              overlayDragRef.current = null;
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
           }}
         >
           <img
             src={blueprintOverlay.imageUrl}
             alt={`Blueprint page ${blueprintOverlay.pageNumber}`}
+            draggable={false}
             style={{
-              maxWidth: '90%',
-              maxHeight: '90%',
+              width: '100%',
+              height: '100%',
               objectFit: 'contain',
               opacity: blueprintOverlay.opacity ?? 0.7,
               filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))',
-              border: '2px solid rgba(255,255,255,0.5)',
+              border: '2px solid rgba(59, 130, 246, 0.7)',
               borderRadius: '4px',
+              pointerEvents: 'none',
+            }}
+          />
+          {/* Resize handles */}
+          {['nw', 'ne', 'sw', 'se'].map((corner) => (
+            <div
+              key={corner}
+              className="resize-handle"
+              style={{
+                position: 'absolute',
+                width: 16,
+                height: 16,
+                background: '#3b82f6',
+                border: '2px solid white',
+                borderRadius: '50%',
+                cursor: `${corner}-resize`,
+                ...(corner.includes('n') ? { top: -8 } : { bottom: -8 }),
+                ...(corner.includes('w') ? { left: -8 } : { right: -8 }),
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                overlayResizeRef.current = {
+                  startX: e.clientX,
+                  startY: e.clientY,
+                  startWidth: overlayTransform.width,
+                  startHeight: overlayTransform.height,
+                  corner,
+                };
+                const onMouseMove = (moveE: MouseEvent) => {
+                  if (!overlayResizeRef.current) return;
+                  const dx = moveE.clientX - overlayResizeRef.current.startX;
+                  const dy = moveE.clientY - overlayResizeRef.current.startY;
+                  const { corner: c, startWidth, startHeight } = overlayResizeRef.current;
+                  let newWidth = startWidth;
+                  let newHeight = startHeight;
+                  let offsetX = 0;
+                  let offsetY = 0;
+                  if (c.includes('e')) newWidth = Math.max(100, startWidth + dx);
+                  if (c.includes('w')) { newWidth = Math.max(100, startWidth - dx); offsetX = dx; }
+                  if (c.includes('s')) newHeight = Math.max(100, startHeight + dy);
+                  if (c.includes('n')) { newHeight = Math.max(100, startHeight - dy); offsetY = dy; }
+                  setOverlayTransform((prev) => ({
+                    ...prev,
+                    width: newWidth,
+                    height: newHeight,
+                    x: prev.x + offsetX / 2,
+                    y: prev.y + offsetY / 2,
+                  }));
+                };
+                const onMouseUp = () => {
+                  overlayResizeRef.current = null;
+                  document.removeEventListener('mousemove', onMouseMove);
+                  document.removeEventListener('mouseup', onMouseUp);
+                };
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+              }}
+            />
+          ))}
+          {/* Rotation handle */}
+          <div
+            style={{
+              position: 'absolute',
+              top: -40,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 24,
+              height: 24,
+              background: '#3b82f6',
+              border: '2px solid white',
+              borderRadius: '50%',
+              cursor: 'grab',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: 12,
+            }}
+            title="Drag to rotate"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const rect = (e.target as HTMLElement).parentElement!.getBoundingClientRect();
+              const centerX = rect.left + rect.width / 2;
+              const centerY = rect.top + rect.height / 2;
+              const startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+              const startRotation = overlayTransform.rotation;
+              const onMouseMove = (moveE: MouseEvent) => {
+                const currentAngle = Math.atan2(moveE.clientY - centerY, moveE.clientX - centerX) * (180 / Math.PI);
+                const deltaAngle = currentAngle - startAngle;
+                setOverlayTransform((prev) => ({
+                  ...prev,
+                  rotation: startRotation + deltaAngle,
+                }));
+              };
+              const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+              };
+              document.addEventListener('mousemove', onMouseMove);
+              document.addEventListener('mouseup', onMouseUp);
+            }}
+          >
+            ↻
+          </div>
+          {/* Connection line to rotation handle */}
+          <div
+            style={{
+              position: 'absolute',
+              top: -28,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 2,
+              height: 20,
+              background: 'rgba(59, 130, 246, 0.7)',
             }}
           />
         </div>
