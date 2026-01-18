@@ -49,10 +49,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       pdfUrl = pdfUrlData?.signedUrl;
     }
 
-    // Check if pages use client-side rendering
-    const isClientSideRender = pages?.some(p =>
-      p.image_path?.startsWith('client-render:') ||
-      p.metadata?.renderMode === 'client-side'
+    // Determine render mode based on file type and page metadata
+    const isDirectImage = document.metadata?.fileCategory === 'image' ||
+      pages?.some(p => p.metadata?.renderMode === 'direct-image');
+
+    const isClientSideRender = !isDirectImage && (
+      pages?.some(p =>
+        p.image_path?.startsWith('client-render:') ||
+        p.metadata?.renderMode === 'client-side'
+      )
     );
 
     // Generate signed URLs for page images (if server-rendered)
@@ -84,12 +89,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
     );
 
+    // Determine the render mode string
+    let renderMode: 'direct-image' | 'client-side' | 'server-side' = 'server-side';
+    if (isDirectImage) {
+      renderMode = 'direct-image';
+    } else if (isClientSideRender) {
+      renderMode = 'client-side';
+    }
+
     return NextResponse.json({
       success: true,
       document,
       pages: pagesWithUrls,
       pdfUrl,
-      renderMode: isClientSideRender ? 'client-side' : 'server-side',
+      imageUrl: isDirectImage ? pdfUrl : null, // For images, use the same signed URL
+      renderMode,
+      fileCategory: document.metadata?.fileCategory || 'pdf',
     });
 
   } catch (error) {

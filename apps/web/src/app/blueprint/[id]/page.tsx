@@ -27,7 +27,9 @@ interface DocumentData {
   document: PDFDocument;
   pages: PageWithUrls[];
   pdfUrl?: string;
-  renderMode?: 'client-side' | 'server-side';
+  imageUrl?: string;
+  renderMode?: 'client-side' | 'server-side' | 'direct-image';
+  fileCategory?: 'pdf' | 'image';
 }
 
 // Client-side PDF page renderer
@@ -378,6 +380,244 @@ function ServerRenderedPage({
         >
           Export to Map
         </button>
+      </div>
+    </div>
+  );
+}
+
+// Direct image renderer (for PNG, JPG, TIFF uploads)
+function DirectImagePage({
+  imageUrl,
+  documentName,
+  onExportToMap,
+  onAnalyze,
+  onViewResults,
+  analysisResult,
+  isAnalyzing,
+}: {
+  imageUrl: string;
+  documentName: string;
+  onExportToMap: (imageDataUrl: string) => void;
+  onAnalyze: (imageDataUrl: string, pageNumber: number) => void;
+  onViewResults?: () => void;
+  analysisResult?: BlueprintAnalysisResult | null;
+  isAnalyzing?: boolean;
+}) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Convert loaded image to data URL for export
+  const handleImageLoad = useCallback(() => {
+    setIsLoading(false);
+    if (imgRef.current) {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = imgRef.current.naturalWidth;
+        canvas.height = imgRef.current.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(imgRef.current, 0, 0);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+          setImageDataUrl(dataUrl);
+        }
+      } catch (err) {
+        console.error('Failed to convert image to data URL:', err);
+      }
+    }
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    setIsLoading(false);
+    setError('Failed to load image');
+  }, []);
+
+  return (
+    <div
+      style={{
+        background: 'white',
+        borderRadius: '8px',
+        border: '1px solid #e5e7eb',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Image area */}
+      <div
+        style={{
+          aspectRatio: '8.5/11',
+          background: '#f3f4f6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {isLoading && (
+          <div style={{ textAlign: 'center', color: '#9ca3af' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                margin: '0 auto 8px',
+                border: '3px solid #3b82f6',
+                borderTopColor: 'transparent',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+              }}
+            />
+            <p style={{ fontSize: '12px' }}>Loading...</p>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ textAlign: 'center', color: '#ef4444' }}>
+            <p style={{ fontSize: '12px' }}>{error}</p>
+          </div>
+        )}
+
+        <img
+          ref={imgRef}
+          src={imageUrl}
+          alt={documentName}
+          crossOrigin="anonymous"
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'contain',
+            display: isLoading || error ? 'none' : 'block',
+          }}
+        />
+
+        {/* Image badge */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '8px',
+            left: '8px',
+            background: 'rgba(0,0,0,0.7)',
+            color: 'white',
+            fontSize: '12px',
+            padding: '4px 8px',
+            borderRadius: '4px',
+          }}
+        >
+          Image
+        </div>
+
+        {/* Analysis Results Badge */}
+        {analysisResult?.success && (
+          <div style={{
+            position: 'absolute',
+            top: '8px',
+            right: '8px',
+            background: '#10b981',
+            color: 'white',
+            fontSize: '10px',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}>
+            <svg style={{ width: '12px', height: '12px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            AI Analyzed
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => imageDataUrl && onExportToMap(imageDataUrl)}
+            disabled={!imageDataUrl}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              background: imageDataUrl ? '#3b82f6' : '#9ca3af',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: imageDataUrl ? 'pointer' : 'not-allowed',
+            }}
+          >
+            Export to Map
+          </button>
+        </div>
+        {analysisResult?.success ? (
+          <button
+            onClick={onViewResults}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+            }}
+          >
+            <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            View Results ({analysisResult.areas?.length || 0} areas)
+          </button>
+        ) : (
+          <button
+            onClick={() => imageDataUrl && onAnalyze(imageDataUrl, 1)}
+            disabled={!imageDataUrl || isAnalyzing}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              background: isAnalyzing ? '#f59e0b' : (imageDataUrl ? '#8b5cf6' : '#9ca3af'),
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: (!imageDataUrl || isAnalyzing) ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+            }}
+          >
+            {isAnalyzing ? (
+              <>
+                <div style={{
+                  width: '14px',
+                  height: '14px',
+                  border: '2px solid white',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                }} />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                Analyze with AI
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -937,8 +1177,9 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
     );
   }
 
-  const { document, pages, pdfUrl, renderMode } = data;
+  const { document, pages, pdfUrl, imageUrl, renderMode } = data;
   const useClientRendering = renderMode === 'client-side' && pdfUrl;
+  const useDirectImage = renderMode === 'direct-image' && (imageUrl || pdfUrl);
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
@@ -972,7 +1213,11 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
             <div>
               <h1 style={{ fontSize: '18px', fontWeight: 600, color: '#111827', margin: 0 }}>{document.name}</h1>
               <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0' }}>
-                {document.page_count ? `${document.page_count} pages` : 'Processing...'}
+                {useDirectImage
+                  ? 'Image file'
+                  : document.page_count
+                    ? `${document.page_count} pages`
+                    : 'Processing...'}
                 {document.status === 'error' && ' - Error'}
                 {useClientRendering && ' (rendering in browser)'}
               </p>
@@ -1048,7 +1293,21 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
             gap: '16px',
           }}>
-            {useClientRendering ? (
+            {useDirectImage ? (
+              // Direct image rendering (PNG, JPG, TIFF)
+              <DirectImagePage
+                imageUrl={imageUrl || pdfUrl || ''}
+                documentName={document.name}
+                onExportToMap={(imageDataUrl) => handleExportToMap({
+                  imageDataUrl,
+                  pageNumber: 1,
+                })}
+                onAnalyze={handleAnalyze}
+                onViewResults={() => setShowResultsPanel(1)}
+                analysisResult={analysisResults.get(1)}
+                isAnalyzing={analyzingPage === 1}
+              />
+            ) : useClientRendering ? (
               // Client-side rendering with pdf.js
               pages.map((page) => (
                 <ClientRenderedPage

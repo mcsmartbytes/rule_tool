@@ -187,7 +187,8 @@ function UploadDropzone({ onUpload, isUploading, progress }: {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file && file.type === 'application/pdf') {
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/tiff'];
+    if (file && allowedTypes.includes(file.type)) {
       onUpload(file);
     }
   }, [onUpload]);
@@ -229,7 +230,7 @@ function UploadDropzone({ onUpload, isUploading, progress }: {
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf"
+        accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff"
         onChange={handleFileSelect}
         style={{ display: 'none' }}
       />
@@ -258,7 +259,7 @@ function UploadDropzone({ onUpload, isUploading, progress }: {
           <p style={{ color: '#4b5563', marginBottom: '8px' }}>
             <span style={{ fontWeight: 500, color: '#2563eb' }}>Click to upload</span> or drag and drop
           </p>
-          <p style={{ fontSize: '14px', color: '#9ca3af' }}>PDF files up to 100MB</p>
+          <p style={{ fontSize: '14px', color: '#9ca3af' }}>PDF, PNG, JPG, TIFF up to 100MB</p>
         </>
       )}
     </div>
@@ -387,7 +388,7 @@ export default function BlueprintPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#111827', margin: 0 }}>Blueprints</h1>
-            <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0' }}>Upload and analyze PDF plans</p>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0' }}>Upload and analyze plans and images</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Link
@@ -445,7 +446,7 @@ export default function BlueprintPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <h3 style={{ fontSize: '18px', fontWeight: 500, color: '#111827', marginBottom: '8px' }}>No documents yet</h3>
-              <p style={{ color: '#6b7280' }}>Upload a PDF blueprint to get started</p>
+              <p style={{ color: '#6b7280' }}>Upload a blueprint (PDF, PNG, JPG, TIFF) to get started</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>

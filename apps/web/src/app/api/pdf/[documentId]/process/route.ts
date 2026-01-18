@@ -83,49 +83,65 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .update({ status: 'processing', error_message: null })
       .eq('id', documentId);
 
-    // Download PDF from storage
-    const { data: pdfData, error: downloadError } = await supabase.storage
-      .from('pdf-documents')
-      .download(document.storage_path);
+    // Check if this is an image file (single page, no PDF processing needed)
+    const fileCategory = document.metadata?.fileCategory || 'pdf';
+    const isImage = fileCategory === 'image';
 
-    if (downloadError || !pdfData) {
-      console.error('Download error:', downloadError);
-      await supabase
-        .from('pdf_documents')
-        .update({ status: 'error', error_message: 'Failed to download PDF' })
-        .eq('id', documentId);
-      return NextResponse.json(
-        { error: 'Failed to download PDF from storage' },
-        { status: 500 }
-      );
+    let pageCount = 1;
+
+    if (isImage) {
+      // Images are single-page documents - no need to download and parse
+      console.log(`Processing image: ${document.name} (${document.file_size} bytes)`);
+    } else {
+      // Download PDF from storage
+      const { data: pdfData, error: downloadError } = await supabase.storage
+        .from('pdf-documents')
+        .download(document.storage_path);
+
+      if (downloadError || !pdfData) {
+        console.error('Download error:', downloadError);
+        await supabase
+          .from('pdf_documents')
+          .update({ status: 'error', error_message: 'Failed to download file' })
+          .eq('id', documentId);
+        return NextResponse.json(
+          { error: 'Failed to download file from storage' },
+          { status: 500 }
+        );
+      }
+
+      // Get page count for PDFs
+      const pdfBuffer = await pdfData.arrayBuffer();
+      console.log(`Processing PDF: ${document.name} (${document.file_size} bytes)`);
+      pageCount = await getPageCountFromPDF(pdfBuffer);
+      console.log(`Found ${pageCount} pages`);
+
+      if (pageCount === 0) {
+        await supabase
+          .from('pdf_documents')
+          .update({ status: 'error', error_message: 'Could not determine page count' })
+          .eq('id', documentId);
+        return NextResponse.json(
+          { error: 'Could not determine page count from PDF' },
+          { status: 400 }
+        );
+      }
     }
 
-    // Get page count
-    const pdfBuffer = await pdfData.arrayBuffer();
-    console.log(`Processing PDF: ${document.name} (${document.file_size} bytes)`);
-    const pageCount = await getPageCountFromPDF(pdfBuffer);
-    console.log(`Found ${pageCount} pages`);
-
-    if (pageCount === 0) {
-      await supabase
-        .from('pdf_documents')
-        .update({ status: 'error', error_message: 'Could not determine page count' })
-        .eq('id', documentId);
-      return NextResponse.json(
-        { error: 'Could not determine page count from PDF' },
-        { status: 400 }
-      );
-    }
-
-    // Create page records (images rendered client-side)
+    // Create page records
     const pageRecords = [];
     for (let i = 1; i <= pageCount; i++) {
       pageRecords.push({
         document_id: documentId,
         page_number: i,
-        image_path: `client-render:${documentId}:${i}`, // Special marker for client-side rendering
+        image_path: isImage
+          ? `image:${documentId}:${document.storage_path}` // Direct image reference
+          : `client-render:${documentId}:${i}`, // PDF client-side rendering marker
         thumbnail_path: null,
-        metadata: { renderMode: 'client-side' },
+        metadata: {
+          renderMode: isImage ? 'direct-image' : 'client-side',
+          fileCategory,
+        },
       });
     }
 
@@ -140,6 +156,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Update document status
+    const renderMode = isImage ? 'direct-image' : 'client-side';
     const { error: updateError } = await supabase
       .from('pdf_documents')
       .update({
@@ -148,7 +165,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         metadata: {
           ...document.metadata,
           processedAt: new Date().toISOString(),
-          renderMode: 'client-side',
+          renderMode,
+          fileCategory,
         },
       })
       .eq('id', documentId);
@@ -161,8 +179,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       documentId,
       pageCount,
-      renderMode: 'client-side',
-      message: 'Document processed. Pages render in browser.',
+      renderMode,
+      fileCategory,
+      message: isImage
+        ? 'Image processed successfully.'
+        : 'Document processed. Pages render in browser.',
     });
 
   } catch (error) {

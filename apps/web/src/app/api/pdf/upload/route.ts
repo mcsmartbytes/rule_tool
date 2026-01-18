@@ -8,7 +8,20 @@ const supabase = createClient(
 );
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-const ALLOWED_TYPES = ['application/pdf'];
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/tiff',
+];
+
+// Map MIME types to file categories
+const FILE_CATEGORIES: Record<string, 'pdf' | 'image'> = {
+  'application/pdf': 'pdf',
+  'image/png': 'image',
+  'image/jpeg': 'image',
+  'image/tiff': 'image',
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,10 +39,12 @@ export async function POST(request: NextRequest) {
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only PDF files are allowed.' },
+        { error: 'Invalid file type. Allowed: PDF, PNG, JPG, TIFF.' },
         { status: 400 }
       );
     }
+
+    const fileCategory = FILE_CATEGORIES[file.type] || 'pdf';
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
@@ -49,7 +64,7 @@ export async function POST(request: NextRequest) {
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('pdf-documents')
       .upload(storagePath, arrayBuffer, {
-        contentType: 'application/pdf',
+        contentType: file.type,
         upsert: false,
       });
 
@@ -73,6 +88,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           originalName: file.name,
           mimeType: file.type,
+          fileCategory: fileCategory,
           uploadedAt: new Date().toISOString(),
         },
       })
