@@ -148,7 +148,7 @@ export default function HomePage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+      background: 'linear-gradient(180deg, #0b0b0b 0%, #151515 100%)',
       overflowX: 'hidden',
     }}>
       {/* Navigation */}
@@ -258,9 +258,10 @@ export default function HomePage() {
           backgroundImage: `url(${heroImage.src})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          opacity: 0.15,
+          opacity: 0.28,
           pointerEvents: 'none',
           zIndex: 0,
+          filter: 'brightness(0.75) contrast(1.05)',
           maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
           WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
         }} />
