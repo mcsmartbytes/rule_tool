@@ -327,7 +327,7 @@ export default function BlueprintPage() {
           organization_id: null,
           uploaded_by: null,
           storage_path: '',
-          page_count: null,
+          page_count: data.document.pageCount || null,
           error_message: null,
           metadata: {},
           created_at: new Date().toISOString(),

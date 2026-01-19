@@ -23,6 +23,37 @@ const FILE_CATEGORIES: Record<string, 'pdf' | 'image'> = {
   'image/tiff': 'image',
 };
 
+// Extract page count from PDF buffer without rendering
+function getPageCountFromPDF(pdfBuffer: ArrayBuffer): number {
+  const bytes = new Uint8Array(pdfBuffer);
+  const text = new TextDecoder('latin1').decode(bytes);
+
+  // Look for /Count in the page tree (most reliable)
+  const countMatches = text.match(/\/Count\s+(\d+)/g);
+  if (countMatches && countMatches.length > 0) {
+    const counts = countMatches.map(m => {
+      const num = m.match(/\d+/);
+      return num ? parseInt(num[0], 10) : 0;
+    });
+    const maxCount = Math.max(...counts);
+    if (maxCount > 0) return maxCount;
+  }
+
+  // Fallback: count /Type /Page occurrences
+  const pageMatches = text.match(/\/Type\s*\/Page[^s]/g);
+  if (pageMatches) {
+    return pageMatches.length;
+  }
+
+  // Last resort: look for /N in linearized PDFs
+  const linearizedMatch = text.match(/\/N\s+(\d+)/);
+  if (linearizedMatch) {
+    return parseInt(linearizedMatch[1], 10);
+  }
+
+  return 1; // Default to 1 page if we can't determine
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -76,7 +107,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create document record in database
+    // Determine page count BEFORE creating the document record
+    // This avoids the "stuck in processing" issue entirely
+    const isImage = fileCategory === 'image';
+    let pageCount = 1;
+
+    if (!isImage) {
+      // For PDFs, extract page count from the buffer we already have
+      pageCount = getPageCountFromPDF(arrayBuffer);
+      console.log(`PDF ${file.name}: detected ${pageCount} pages`);
+    }
+
+    const renderMode = isImage ? 'direct-image' : 'client-side';
+
+    // Create document record with final status (no intermediate "processing" state)
     const { data: document, error: dbError } = await supabase
       .from('pdf_documents')
       .insert({
@@ -84,12 +128,15 @@ export async function POST(request: NextRequest) {
         name: file.name,
         storage_path: storagePath,
         file_size: file.size,
-        status: 'processing',
+        status: 'ready', // Set to ready immediately since processing is inline
+        page_count: pageCount,
         metadata: {
           originalName: file.name,
           mimeType: file.type,
           fileCategory: fileCategory,
           uploadedAt: new Date().toISOString(),
+          processedAt: new Date().toISOString(),
+          renderMode,
         },
       })
       .select()
@@ -105,30 +152,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Trigger page processing
-    // We do this async so the upload returns quickly
-    const processUrl = new URL(`/api/pdf/${document.id}/process`, request.url);
-
-    // Fire and forget - don't await
-    fetch(processUrl.toString(), { method: 'POST' })
-      .then((res) => {
-        if (!res.ok) {
-          console.error('Processing trigger failed:', res.status);
-        }
-      })
-      .catch((err) => {
-        console.error('Processing trigger error:', err);
+    // Create page records inline
+    const pageRecords = [];
+    for (let i = 1; i <= pageCount; i++) {
+      pageRecords.push({
+        document_id: document.id,
+        page_number: i,
+        image_path: isImage
+          ? `image:${document.id}:${storagePath}` // Direct image reference
+          : `client-render:${document.id}:${i}`, // PDF client-side rendering marker
+        thumbnail_path: null,
+        metadata: {
+          renderMode,
+          fileCategory,
+        },
       });
+    }
+
+    if (pageRecords.length > 0) {
+      const { error: insertError } = await supabase
+        .from('pdf_pages')
+        .insert(pageRecords);
+
+      if (insertError) {
+        console.error('Failed to insert page records:', insertError);
+        // Don't fail the whole upload, just log it
+      }
+    }
 
     return NextResponse.json({
       success: true,
       document: {
         id: document.id,
         name: document.name,
-        status: 'processing',
+        status: 'ready',
         fileSize: document.file_size,
+        pageCount: pageCount,
       },
-      message: 'File uploaded successfully. Processing pages...',
+      message: `File uploaded and processed. ${pageCount} page(s) found.`,
     });
 
   } catch (error) {
