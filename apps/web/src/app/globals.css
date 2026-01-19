@@ -8,6 +8,20 @@
   --accent-2: #94f0ff;
 }
 
+.home-hero-bg {
+  background-image: var(--hero-image);
+  background-attachment: fixed;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+@media (max-width: 768px) {
+  .home-hero-bg {
+    background-attachment: scroll;
+  }
+}
+
 html, body {
   height: 100%;
   margin: 0;

@@ -146,16 +146,16 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{
+    <div
+      className="home-hero-bg"
+      style={{
+        ['--hero-image' as React.CSSProperties['--hero-image']]: `url(${heroImage.src})`,
       minHeight: '100vh',
-      backgroundImage: `url(${heroImage.src})`,
       backgroundColor: 'rgba(255,255,255,0.08)',
       backgroundBlendMode: 'screen',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center top',
-      backgroundRepeat: 'no-repeat',
       overflowX: 'hidden',
-    }}>
+      }}
+    >
       {/* Navigation */}
       <nav style={{
         display: 'flex',
