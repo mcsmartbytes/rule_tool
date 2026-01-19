@@ -28,6 +28,7 @@
     "@rule-tool/industry-roofing": "*",
     "@rule-tool/industry-sealing-striping": "*",
     "@sentry/nextjs": "^10.32.1",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.45.0",
     "@turf/turf": "^7.2.0",
     "canvas": "^3.2.1",

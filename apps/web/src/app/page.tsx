@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuthStore, useIsAuthenticated } from '@/lib/auth/store';
 
 // Tape measure logo component
 function TapeMeasureLogo({ size = 20 }: { size?: number }) {
@@ -115,6 +116,9 @@ export default function HomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
+  const isAuthenticated = useIsAuthenticated();
+  const { user, signOut, profile } = useAuthStore();
+
   // Override body overflow to allow scrolling on landing page
   useEffect(() => {
     document.body.style.overflow = 'auto';
@@ -168,33 +172,71 @@ export default function HomePage() {
           <span style={{ fontSize: '20px', fontWeight: 700, color: 'white' }}>Rule Tool</span>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <Link
-            href="/dashboard"
-            style={{
-              padding: '10px 20px',
-              color: '#94a3b8',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-            }}
-          >
-            Dashboard
-          </Link>
-          <a
-            href="mailto:hello@ruletool.com?subject=Demo Request"
-            style={{
-              padding: '10px 20px',
-              background: 'rgba(255,255,255,0.1)',
-              color: 'white',
-              textDecoration: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              border: '1px solid rgba(255,255,255,0.2)',
-            }}
-          >
-            Book a Demo
-          </a>
+          {isAuthenticated ? (
+            <>
+              <Link
+                href="/dashboard"
+                style={{
+                  padding: '10px 20px',
+                  color: '#94a3b8',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                Dashboard
+              </Link>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '14px', color: '#e2e8f0' }}>
+                  {profile?.full_name || user?.email?.split('@')[0]}
+                </span>
+                <button
+                  onClick={() => signOut()}
+                  style={{
+                    padding: '10px 20px',
+                    background: 'rgba(255,255,255,0.1)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Sign Out
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                style={{
+                  padding: '10px 20px',
+                  color: '#94a3b8',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/signup"
+                style={{
+                  padding: '10px 20px',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  color: 'white',
+                  textDecoration: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                Sign Up Free
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
