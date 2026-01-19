@@ -76,7 +76,8 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public files (public folder)
      * - api routes (API routes)
+     * - auth/callback (auth callback route)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api|auth/callback).*)',
   ],
 };

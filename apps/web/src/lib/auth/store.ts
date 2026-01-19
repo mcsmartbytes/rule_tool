@@ -91,6 +91,11 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   signUp: async (email: string, password: string, fullName: string) => {
     set({ isLoading: true, error: null });
 
+    // Get the current origin for the redirect URL
+    const redirectUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : undefined;
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -98,6 +103,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         data: {
           full_name: fullName,
         },
+        emailRedirectTo: redirectUrl,
       },
     });
 
