@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuthStore, useIsAuthenticated } from '@/lib/auth/store';
+import heroBackground from '../../public/hero-bg.png';
+import logoImage from '../../public/logo.png';
 
 // Tape measure logo component
 function TapeMeasureLogo({ size = 20 }: { size?: number }) {
@@ -158,18 +161,14 @@ export default function HomePage() {
         margin: '0 auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-            borderRadius: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <TapeMeasureLogo size={24} />
-          </div>
-          <span style={{ fontSize: '20px', fontWeight: 700, color: 'white' }}>Rule Tool</span>
+          <Image
+            src={logoImage}
+            alt="Rule Tool"
+            width={180}
+            height={50}
+            style={{ objectFit: 'contain' }}
+            priority
+          />
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {isAuthenticated ? (
@@ -256,15 +255,23 @@ export default function HomePage() {
           transform: 'translateX(-50%)',
           width: '120%',
           height: '600px',
-          backgroundImage: 'url(/hero-bg.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
           opacity: 0.15,
           pointerEvents: 'none',
           zIndex: 0,
-          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-        }} />
+          overflow: 'hidden',
+        }}>
+          <Image
+            src={heroBackground}
+            alt=""
+            fill
+            style={{
+              objectFit: 'cover',
+              maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
+              WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
+            }}
+            priority
+          />
+        </div>
         <div style={{
           display: 'inline-block',
           padding: '6px 16px',
