@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuthStore, useIsAuthenticated } from '@/lib/auth/store';
-import heroBackground from '../../public/hero-bg.png';
-import logoImage from '../../public/logo.png';
 
 // Tape measure logo component
 function TapeMeasureLogo({ size = 20 }: { size?: number }) {
@@ -162,12 +160,13 @@ export default function HomePage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Image
-            src={logoImage}
+            src="/logo.png"
             alt="Rule Tool"
             width={180}
             height={50}
             style={{ objectFit: 'contain' }}
             priority
+            unoptimized
           />
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -255,23 +254,15 @@ export default function HomePage() {
           transform: 'translateX(-50%)',
           width: '120%',
           height: '600px',
+          backgroundImage: 'url(/hero-bg.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
           opacity: 0.15,
           pointerEvents: 'none',
           zIndex: 0,
-          overflow: 'hidden',
-        }}>
-          <Image
-            src={heroBackground}
-            alt=""
-            fill
-            style={{
-              objectFit: 'cover',
-              maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-              WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-            }}
-            priority
-          />
-        </div>
+          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
+        }} />
         <div style={{
           display: 'inline-block',
           padding: '6px 16px',
