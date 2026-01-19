@@ -6,5 +6,7 @@ node_modules
 *.png
 *.jpg
 *.jpeg
+!apps/web/public/*.png
+!apps/web/src/assets/*.png
 tsconfig.tsbuildinfo
 PROGRESS*.md
