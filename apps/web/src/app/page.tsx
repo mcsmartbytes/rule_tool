@@ -148,7 +148,12 @@ export default function HomePage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #0b0b0b 0%, #151515 100%)',
+      backgroundImage: `url(${heroImage.src})`,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundBlendMode: 'screen',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center top',
+      backgroundRepeat: 'no-repeat',
       overflowX: 'hidden',
     }}>
       {/* Navigation */}
@@ -247,24 +252,6 @@ export default function HomePage() {
         margin: '0 auto',
         position: 'relative',
       }}>
-        {/* Background image */}
-        <div style={{
-          position: 'absolute',
-          top: '-100px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '120%',
-          height: '600px',
-          backgroundImage: `url(${heroImage.src})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          opacity: 0.28,
-          pointerEvents: 'none',
-          zIndex: 0,
-          filter: 'brightness(0.75) contrast(1.05)',
-          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
-        }} />
         <div style={{
           display: 'inline-block',
           padding: '6px 16px',
