@@ -29,9 +29,9 @@ function StatCard({ label, value, subtext, color, icon }: { label: string; value
       )}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
-          <p style={{ fontSize: '13px', color: '#6b7280', margin: 0, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</p>
+          <p style={{ fontSize: '13px', color: '#4b5563', margin: 0, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</p>
           <p style={{ fontSize: '28px', fontWeight: 700, color: color || '#111827', margin: '8px 0 0 0', lineHeight: 1 }}>{value}</p>
-          {subtext && <p style={{ fontSize: '13px', color: '#6b7280', margin: '6px 0 0 0' }}>{subtext}</p>}
+          {subtext && <p style={{ fontSize: '13px', color: '#4b5563', margin: '6px 0 0 0' }}>{subtext}</p>}
         </div>
         {icon && (
           <div style={{ color: color || '#9ca3af', opacity: 0.6 }}>{icon}</div>
@@ -116,7 +116,7 @@ function BidCard({ bid, onClick }: { bid: Bid; onClick: () => void }) {
         {bid.customer_name && (
           <p style={{
             fontSize: '13px',
-            color: '#6b7280',
+            color: '#374151',
             margin: '0 0 10px 0',
             display: 'flex',
             alignItems: 'center',
@@ -137,7 +137,7 @@ function BidCard({ bid, onClick }: { bid: Bid; onClick: () => void }) {
               alignItems: 'center',
               gap: '6px',
               fontSize: '12px',
-              color: isOverdue ? '#dc2626' : isDueSoon ? '#d97706' : '#6b7280',
+              color: isOverdue ? '#dc2626' : isDueSoon ? '#d97706' : '#374151',
               fontWeight: isOverdue || isDueSoon ? 600 : 400,
             }}>
               <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,7 +165,7 @@ function BidCard({ bid, onClick }: { bid: Bid; onClick: () => void }) {
               textTransform: 'uppercase',
               letterSpacing: '0.3px',
               backgroundColor: bid.priority === 'urgent' ? '#fef2f2' : bid.priority === 'high' ? '#fffbeb' : '#f9fafb',
-              color: bid.priority === 'urgent' ? '#dc2626' : bid.priority === 'high' ? '#d97706' : '#6b7280',
+              color: bid.priority === 'urgent' ? '#dc2626' : bid.priority === 'high' ? '#d97706' : '#4b5563',
             }}>
               {bid.priority}
             </span>
@@ -188,7 +188,7 @@ function BidCard({ bid, onClick }: { bid: Bid; onClick: () => void }) {
               </span>
             ))}
             {bid.tags.length > 3 && (
-              <span style={{ fontSize: '11px', color: '#9ca3af' }}>+{bid.tags.length - 3}</span>
+              <span style={{ fontSize: '11px', color: '#6b7280' }}>+{bid.tags.length - 3}</span>
             )}
           </div>
         )}
@@ -249,7 +249,7 @@ function PipelineColumn({ stage, bids, onBidClick }: {
         {totalValue > 0 && (
           <p style={{
             fontSize: '13px',
-            color: '#6b7280',
+            color: '#374151',
             margin: '8px 0 0 20px',
             fontWeight: 500,
           }}>
@@ -272,7 +272,7 @@ function PipelineColumn({ stage, bids, onBidClick }: {
           <div style={{
             textAlign: 'center',
             padding: '32px 16px',
-            color: '#9ca3af',
+            color: '#6b7280',
           }}>
             <svg style={{ width: '40px', height: '40px', margin: '0 auto 12px', opacity: 0.5 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -510,28 +510,28 @@ function BidDetailPanel({ bid, onClose }: { bid: Bid; onClose: () => void }) {
         <div style={{ padding: '24px' }}>
           {bid.customer_name && (
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', color: '#6b7280' }}>Customer</label>
+              <label style={{ fontSize: '14px', color: '#4b5563', fontWeight: 500 }}>Customer</label>
               <p style={{ fontWeight: '500', margin: '4px 0 0 0' }}>{bid.customer_name}</p>
             </div>
           )}
 
           {bid.estimated_value && (
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', color: '#6b7280' }}>Estimated Value</label>
+              <label style={{ fontSize: '14px', color: '#4b5563', fontWeight: 500 }}>Estimated Value</label>
               <p style={{ fontWeight: '500', color: '#059669', margin: '4px 0 0 0' }}>{formatCurrency(bid.estimated_value)}</p>
             </div>
           )}
 
           {bid.bid_due_date && (
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', color: '#6b7280' }}>Due Date</label>
+              <label style={{ fontSize: '14px', color: '#4b5563', fontWeight: 500 }}>Due Date</label>
               <p style={{ fontWeight: '500', margin: '4px 0 0 0' }}>{new Date(bid.bid_due_date).toLocaleDateString()}</p>
             </div>
           )}
 
           {bid.description && (
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', color: '#6b7280' }}>Description</label>
+              <label style={{ fontSize: '14px', color: '#4b5563', fontWeight: 500 }}>Description</label>
               <p style={{ color: '#374151', margin: '4px 0 0 0' }}>{bid.description}</p>
             </div>
           )}
@@ -810,7 +810,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h3 style={{ fontWeight: 600, color: '#065f46', margin: 0, fontSize: '15px' }}>Won Bids</h3>
-                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '2px 0 0' }}>{stats.byStage.won?.count || 0} projects</p>
+                  <p style={{ fontSize: '12px', color: '#4b5563', margin: '2px 0 0' }}>{stats.byStage.won?.count || 0} projects</p>
                 </div>
               </div>
               <p style={{ fontSize: '28px', fontWeight: 700, color: '#059669', margin: 0 }}>{formatCurrency(stats.byStage.won?.value || 0)}</p>
@@ -840,7 +840,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h3 style={{ fontWeight: 600, color: '#991b1b', margin: 0, fontSize: '15px' }}>Lost Bids</h3>
-                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '2px 0 0' }}>{stats.byStage.lost?.count || 0} projects</p>
+                  <p style={{ fontSize: '12px', color: '#4b5563', margin: '2px 0 0' }}>{stats.byStage.lost?.count || 0} projects</p>
                 </div>
               </div>
               <p style={{ fontSize: '28px', fontWeight: 700, color: '#dc2626', margin: 0 }}>{formatCurrency(stats.byStage.lost?.value || 0)}</p>
