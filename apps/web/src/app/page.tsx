@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuthStore, useIsAuthenticated } from '@/lib/auth/store';
+import logoImage from '@/assets/rule-tool-logo.png';
+import heroImage from '@/assets/rule-tool-hero.png';
 
 // Tape measure logo component
 function TapeMeasureLogo({ size = 20 }: { size?: number }) {
@@ -160,13 +162,12 @@ export default function HomePage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Image
-            src="/rule-tool-logo.png"
+            src={logoImage}
             alt="Rule Tool"
             width={180}
             height={50}
             style={{ objectFit: 'contain' }}
             priority
-            unoptimized
           />
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -254,7 +255,7 @@ export default function HomePage() {
           transform: 'translateX(-50%)',
           width: '120%',
           height: '600px',
-          backgroundImage: 'url(/rule-tool-hero.png)',
+          backgroundImage: `url(${heroImage.src})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           opacity: 0.15,
