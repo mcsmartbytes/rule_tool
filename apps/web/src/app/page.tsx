@@ -160,7 +160,7 @@ export default function HomePage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Image
-            src="/logo.png"
+            src="/rule-tool-logo.png"
             alt="Rule Tool"
             width={180}
             height={50}
@@ -254,7 +254,7 @@ export default function HomePage() {
           transform: 'translateX(-50%)',
           width: '120%',
           height: '600px',
-          backgroundImage: 'url(/hero-bg.png)',
+          backgroundImage: 'url(/rule-tool-hero.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           opacity: 0.15,
