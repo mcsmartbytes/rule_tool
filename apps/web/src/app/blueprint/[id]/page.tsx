@@ -1127,8 +1127,8 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
     sessionStorage.setItem('blueprintAnalysis', JSON.stringify(exportData));
     setShowResultsPanel(null);
 
-    // Optionally navigate to the site page to apply measurements
-    router.push('/site?mode=analysis');
+    // Navigate to the estimate page to show breakdown
+    router.push('/estimate');
   }, [documentId, router]);
 
   if (isLoading) {
@@ -1182,15 +1182,20 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
   const useDirectImage = renderMode === 'direct-image' && (imageUrl || pdfUrl);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+    <div style={{
+      height: '100vh',
+      background: '#f9fafb',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
       {/* Header */}
       <header style={{
         background: 'white',
         borderBottom: '1px solid #e5e7eb',
         padding: '16px 24px',
         boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-        position: 'sticky',
-        top: 0,
+        flexShrink: 0,
         zIndex: 10,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1248,7 +1253,8 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
       </header>
 
       {/* Content */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '32px 24px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {pages.length === 0 ? (
           <div style={{
             background: 'white',
@@ -1343,6 +1349,7 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
             )}
           </div>
         )}
+      </div>
       </div>
 
       {/* Analysis Results Panel */}

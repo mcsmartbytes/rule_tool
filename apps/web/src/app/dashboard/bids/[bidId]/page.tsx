@@ -376,62 +376,140 @@ export default function BidDetailPage() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      {/* Header */}
-      <header style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '16px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+    <div style={{
+      height: '100vh',
+      backgroundColor: '#f1f5f9',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      {/* Header - Professional SiteSense design */}
+      <header style={{
+        background: 'white',
+        borderBottom: '1px solid #e5e7eb',
+        flexShrink: 0,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+      }}>
+        {/* Top bar with navigation */}
+        <div style={{
+          padding: '12px 24px',
+          borderBottom: '1px solid #f3f4f6',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
           <Link
             href="/dashboard"
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              color: '#6b7280',
+              gap: '6px',
+              color: '#1d4ed8',
               textDecoration: 'none',
               fontSize: '14px',
+              fontWeight: 500,
             }}
           >
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Dashboard
+            Back to Pipeline
           </Link>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', margin: 0 }}>{bid.name}</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
-              {bid.customer_name && (
-                <span style={{ color: '#6b7280', fontSize: '14px' }}>{bid.customer_name}</span>
-              )}
-              {bid.bid_number && (
-                <span style={{ color: '#9ca3af', fontSize: '14px' }}>#{bid.bid_number}</span>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <StageSelector currentStage={bid.stage} onStageChange={handleStageChange} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              onClick={() => window.print()}
+              style={{
+                padding: '6px 12px',
+                background: '#f3f4f6',
+                color: '#374151',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Print
+            </button>
             <button
               onClick={() => setShowNoteModal(true)}
               style={{
-                padding: '8px 16px',
-                border: '1px solid #d1d5db',
+                padding: '6px 12px',
+                background: '#1d4ed8',
+                color: 'white',
+                border: 'none',
                 borderRadius: '6px',
-                backgroundColor: 'white',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: '13px',
+                fontWeight: 500,
               }}
             >
               Add Note
             </button>
           </div>
         </div>
+
+        {/* Bid header info */}
+        <div style={{ padding: '20px 24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#111827', margin: 0 }}>{bid.name}</h1>
+                <span style={{
+                  padding: '4px 10px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  borderRadius: '6px',
+                  backgroundColor: stageInfo.color + '15',
+                  color: stageInfo.color,
+                }}>
+                  {stageInfo.label}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#6b7280', fontSize: '14px' }}>
+                {bid.customer_name && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    {bid.customer_name}
+                  </span>
+                )}
+                {bid.bid_number && (
+                  <span style={{ color: '#9ca3af' }}>#{bid.bid_number}</span>
+                )}
+                {bid.bid_due_date && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Due {new Date(bid.bid_due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {bid.estimated_value && (
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Estimated Value</p>
+                  <p style={{ fontSize: '28px', fontWeight: 700, color: '#1d4ed8', margin: 0 }}>{formatCurrency(bid.estimated_value)}</p>
+                </div>
+              )}
+              <StageSelector currentStage={bid.stage} onStageChange={handleStageChange} />
+            </div>
+          </div>
+        </div>
       </header>
 
-      {/* Main content */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+      {/* Main content - scrollable */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Overview Tab */}
@@ -688,6 +766,7 @@ export default function BidDetailPage() {
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* Add Note Modal */}

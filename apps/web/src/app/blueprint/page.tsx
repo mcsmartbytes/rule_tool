@@ -382,9 +382,15 @@ export default function BlueprintPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+    <div style={{
+      height: '100vh',
+      background: '#f9fafb',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
       {/* Header */}
-      <header style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '16px 24px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+      <header style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '16px 24px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#111827', margin: 0 }}>Blueprints</h1>
@@ -421,7 +427,8 @@ export default function BlueprintPage() {
         </div>
       </header>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '32px 24px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Upload Section */}
         <div style={{ marginBottom: '32px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 500, color: '#111827', marginBottom: '16px' }}>Upload New Blueprint</h2>
@@ -461,6 +468,7 @@ export default function BlueprintPage() {
               ))}
             </div>
           )}
+        </div>
         </div>
       </div>
 
