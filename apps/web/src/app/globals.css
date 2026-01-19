@@ -13,9 +13,22 @@ html, body {
   margin: 0;
 }
 body {
-  background: radial-gradient(1200px 800px at 10% 10%, rgba(122,162,255,0.12), transparent 50%),
-              radial-gradient(1400px 900px at 90% 20%, rgba(148,240,255,0.10), transparent 50%),
-              var(--bg);
+  background-color: #1e293b;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 165, 0, 0.05) 10px,
+      rgba(255, 165, 0, 0.05) 11px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 165, 0, 0.05) 10px,
+      rgba(255, 165, 0, 0.05) 11px
+    );
   color: var(--fg);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   overflow: hidden;
