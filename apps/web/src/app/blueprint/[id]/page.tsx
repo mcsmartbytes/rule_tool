@@ -13,10 +13,9 @@ import type {
   DetectedMaterial,
 } from '@/lib/blueprint/analysis-types';
 
-// Set worker path for pdf.js v5.x - use cdnjs which is more reliable
+// Set worker path for pdf.js v5.x - use jsdelivr which has proper CORS headers
 if (typeof window !== 'undefined') {
-  // pdfjs-dist v5.x uses a different worker structure
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 }
 
 interface PageWithUrls extends PDFPage {
