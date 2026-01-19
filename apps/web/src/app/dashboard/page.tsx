@@ -29,9 +29,9 @@ function StatCard({ label, value, subtext, color, icon }: { label: string; value
       )}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
-          <p style={{ fontSize: '13px', color: '#4b5563', margin: 0, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</p>
+          <p style={{ fontSize: '13px', color: '#1f2937', margin: 0, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</p>
           <p style={{ fontSize: '28px', fontWeight: 700, color: color || '#111827', margin: '8px 0 0 0', lineHeight: 1 }}>{value}</p>
-          {subtext && <p style={{ fontSize: '13px', color: '#4b5563', margin: '6px 0 0 0' }}>{subtext}</p>}
+          {subtext && <p style={{ fontSize: '13px', color: '#1f2937', margin: '6px 0 0 0' }}>{subtext}</p>}
         </div>
         {icon && (
           <div style={{ color: color || '#9ca3af', opacity: 0.6 }}>{icon}</div>
@@ -116,7 +116,7 @@ function BidCard({ bid, onClick }: { bid: Bid; onClick: () => void }) {
         {bid.customer_name && (
           <p style={{
             fontSize: '13px',
-            color: '#374151',
+            color: '#111827',
             margin: '0 0 10px 0',
             display: 'flex',
             alignItems: 'center',
@@ -179,7 +179,7 @@ function BidCard({ bid, onClick }: { bid: Bid; onClick: () => void }) {
               <span key={tag} style={{
                 padding: '3px 8px',
                 backgroundColor: '#f3f4f6',
-                color: '#4b5563',
+                color: '#1f2937',
                 fontSize: '11px',
                 borderRadius: '4px',
                 fontWeight: 500,
@@ -237,7 +237,7 @@ function PipelineColumn({ stage, bids, onBidClick }: {
           </div>
           <span style={{
             backgroundColor: '#f3f4f6',
-            color: '#4b5563',
+            color: '#1f2937',
             padding: '2px 10px',
             borderRadius: '12px',
             fontSize: '13px',
@@ -249,7 +249,7 @@ function PipelineColumn({ stage, bids, onBidClick }: {
         {totalValue > 0 && (
           <p style={{
             fontSize: '13px',
-            color: '#374151',
+            color: '#111827',
             margin: '8px 0 0 20px',
             fontWeight: 500,
           }}>
@@ -343,7 +343,7 @@ function CreateBidModal({ isOpen, onClose, onCreate }: {
         <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: '#111' }}>New Bid</h2>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111827', marginBottom: '4px' }}>
             Bid Name *
           </label>
           <input
@@ -356,7 +356,7 @@ function CreateBidModal({ isOpen, onClose, onCreate }: {
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111827', marginBottom: '4px' }}>
             Customer Name
           </label>
           <input
@@ -369,7 +369,7 @@ function CreateBidModal({ isOpen, onClose, onCreate }: {
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111827', marginBottom: '4px' }}>
             Estimated Value
           </label>
           <input
@@ -384,7 +384,7 @@ function CreateBidModal({ isOpen, onClose, onCreate }: {
         </div>
 
         <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111827', marginBottom: '4px' }}>
             Due Date
           </label>
           <input
@@ -406,7 +406,7 @@ function CreateBidModal({ isOpen, onClose, onCreate }: {
               borderRadius: '6px',
               cursor: 'pointer',
               backgroundColor: 'white',
-              color: '#374151',
+              color: '#111827',
               fontSize: '14px',
               fontWeight: '500',
             }}
@@ -510,29 +510,29 @@ function BidDetailPanel({ bid, onClose }: { bid: Bid; onClose: () => void }) {
         <div style={{ padding: '24px' }}>
           {bid.customer_name && (
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', color: '#4b5563', fontWeight: 500 }}>Customer</label>
+              <label style={{ fontSize: '14px', color: '#1f2937', fontWeight: 500 }}>Customer</label>
               <p style={{ fontWeight: '500', margin: '4px 0 0 0' }}>{bid.customer_name}</p>
             </div>
           )}
 
           {bid.estimated_value && (
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', color: '#4b5563', fontWeight: 500 }}>Estimated Value</label>
+              <label style={{ fontSize: '14px', color: '#1f2937', fontWeight: 500 }}>Estimated Value</label>
               <p style={{ fontWeight: '500', color: '#059669', margin: '4px 0 0 0' }}>{formatCurrency(bid.estimated_value)}</p>
             </div>
           )}
 
           {bid.bid_due_date && (
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', color: '#4b5563', fontWeight: 500 }}>Due Date</label>
+              <label style={{ fontSize: '14px', color: '#1f2937', fontWeight: 500 }}>Due Date</label>
               <p style={{ fontWeight: '500', margin: '4px 0 0 0' }}>{new Date(bid.bid_due_date).toLocaleDateString()}</p>
             </div>
           )}
 
           {bid.description && (
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', color: '#4b5563', fontWeight: 500 }}>Description</label>
-              <p style={{ color: '#374151', margin: '4px 0 0 0' }}>{bid.description}</p>
+              <label style={{ fontSize: '14px', color: '#1f2937', fontWeight: 500 }}>Description</label>
+              <p style={{ color: '#111827', margin: '4px 0 0 0' }}>{bid.description}</p>
             </div>
           )}
 
@@ -768,7 +768,7 @@ export default function DashboardPage() {
 
         {/* Pipeline View */}
         <div style={{ marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#374151', margin: '0 0 16px 0' }}>Active Pipeline</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', margin: '0 0 16px 0' }}>Active Pipeline</h2>
           <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
             {activePipelineStages.map((stage) => (
               <PipelineColumn
@@ -783,7 +783,7 @@ export default function DashboardPage() {
 
         {/* Won/Lost Summary */}
         <div>
-          <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#374151', margin: '0 0 16px 0' }}>Results</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', margin: '0 0 16px 0' }}>Results</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
             <div style={{
               backgroundColor: 'white',
@@ -810,7 +810,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h3 style={{ fontWeight: 600, color: '#065f46', margin: 0, fontSize: '15px' }}>Won Bids</h3>
-                  <p style={{ fontSize: '12px', color: '#4b5563', margin: '2px 0 0' }}>{stats.byStage.won?.count || 0} projects</p>
+                  <p style={{ fontSize: '12px', color: '#1f2937', margin: '2px 0 0' }}>{stats.byStage.won?.count || 0} projects</p>
                 </div>
               </div>
               <p style={{ fontSize: '28px', fontWeight: 700, color: '#059669', margin: 0 }}>{formatCurrency(stats.byStage.won?.value || 0)}</p>
@@ -840,7 +840,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h3 style={{ fontWeight: 600, color: '#991b1b', margin: 0, fontSize: '15px' }}>Lost Bids</h3>
-                  <p style={{ fontSize: '12px', color: '#4b5563', margin: '2px 0 0' }}>{stats.byStage.lost?.count || 0} projects</p>
+                  <p style={{ fontSize: '12px', color: '#1f2937', margin: '2px 0 0' }}>{stats.byStage.lost?.count || 0} projects</p>
                 </div>
               </div>
               <p style={{ fontSize: '28px', fontWeight: 700, color: '#dc2626', margin: 0 }}>{formatCurrency(stats.byStage.lost?.value || 0)}</p>

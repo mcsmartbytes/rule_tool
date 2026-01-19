@@ -637,6 +637,110 @@ function DirectImagePage({
   );
 }
 
+// Expandable item component for showing breakdown
+function ExpandableItem({
+  id,
+  title,
+  subtitle,
+  confidence,
+  isSelected,
+  onToggleSelect,
+  children,
+  bgColor = '#f9fafb',
+  selectedBgColor = '#eff6ff',
+  borderColor = '#e5e7eb',
+  selectedBorderColor = '#93c5fd',
+}: {
+  id: string;
+  title: string;
+  subtitle?: string;
+  confidence: number;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  children?: React.ReactNode;
+  bgColor?: string;
+  selectedBgColor?: string;
+  borderColor?: string;
+  selectedBorderColor?: string;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div style={{
+      background: isSelected ? selectedBgColor : bgColor,
+      border: `1px solid ${isSelected ? selectedBorderColor : borderColor}`,
+      borderRadius: '8px',
+      overflow: 'hidden',
+    }}>
+      <label style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '10px',
+        padding: '12px',
+        cursor: 'pointer',
+      }}>
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          style={{ marginTop: '3px' }}
+        />
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{title}</div>
+              {subtitle && (
+                <div style={{ fontSize: '12px', color: '#374151', marginTop: '2px' }}>{subtitle}</div>
+              )}
+            </div>
+            <div style={{
+              fontSize: '11px',
+              fontWeight: 600,
+              color: confidence >= 0.8 ? '#059669' : confidence >= 0.6 ? '#d97706' : '#dc2626',
+              padding: '2px 6px',
+              background: confidence >= 0.8 ? '#ecfdf5' : confidence >= 0.6 ? '#fffbeb' : '#fef2f2',
+              borderRadius: '4px',
+            }}>
+              {Math.round(confidence * 100)}%
+            </div>
+          </div>
+        </div>
+        {children && (
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsExpanded(!isExpanded); }}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+              color: '#6b7280',
+              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s',
+            }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        )}
+      </label>
+      {isExpanded && children && (
+        <div style={{
+          padding: '12px',
+          paddingTop: '0',
+          borderTop: '1px solid #e5e7eb',
+          marginTop: '0',
+          background: 'rgba(0,0,0,0.02)',
+        }}>
+          <div style={{ paddingTop: '12px' }}>
+            {children}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Analysis Results Panel Component
 function AnalysisResultsPanel({
   result,
@@ -775,35 +879,53 @@ function AnalysisResultsPanel({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {result.areas.map((area) => (
-                <label
+                <ExpandableItem
                   key={area.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '10px',
-                    padding: '10px 12px',
-                    background: selectedAreas.has(area.id) ? '#eff6ff' : '#f9fafb',
-                    border: `1px solid ${selectedAreas.has(area.id) ? '#93c5fd' : '#e5e7eb'}`,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                  }}
+                  id={area.id}
+                  title={area.label || area.subType || area.type}
+                  subtitle={area.areaSqFt ? `${area.areaSqFt.toLocaleString()} SF` : 'Area TBD'}
+                  confidence={area.confidence || 0}
+                  isSelected={selectedAreas.has(area.id)}
+                  onToggleSelect={() => toggleSelection(area.id, selectedAreas, setSelectedAreas)}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedAreas.has(area.id)}
-                    onChange={() => toggleSelection(area.id, selectedAreas, setSelectedAreas)}
-                    style={{ marginTop: '2px' }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>
-                      {area.label || area.subType || area.type}
+                  <div style={{ fontSize: '12px', color: '#374151' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '8px', color: '#111827' }}>How this was calculated:</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#f3f4f6', borderRadius: '4px' }}>
+                        <span style={{ color: '#6b7280' }}>Type:</span>
+                        <span style={{ fontWeight: 500 }}>{area.type}</span>
+                      </div>
+                      {area.subType && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#f3f4f6', borderRadius: '4px' }}>
+                          <span style={{ color: '#6b7280' }}>Sub-type:</span>
+                          <span style={{ fontWeight: 500 }}>{area.subType}</span>
+                        </div>
+                      )}
+                      {area.areaSqFt && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#f3f4f6', borderRadius: '4px' }}>
+                          <span style={{ color: '#6b7280' }}>Area:</span>
+                          <span style={{ fontWeight: 500 }}>{area.areaSqFt.toLocaleString()} sq ft</span>
+                        </div>
+                      )}
+                      {area.polygon && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#f3f4f6', borderRadius: '4px' }}>
+                          <span style={{ color: '#6b7280' }}>Vertices:</span>
+                          <span style={{ fontWeight: 500 }}>{area.polygon.length} points detected</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#f3f4f6', borderRadius: '4px' }}>
+                        <span style={{ color: '#6b7280' }}>AI Confidence:</span>
+                        <span style={{ fontWeight: 500, color: area.confidence >= 0.8 ? '#059669' : area.confidence >= 0.6 ? '#d97706' : '#dc2626' }}>
+                          {Math.round((area.confidence || 0) * 100)}%
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
-                      {area.areaSqFt ? `${area.areaSqFt} SF` : 'Area TBD'}
-                      <span style={{ marginLeft: '8px' }}>{Math.round((area.confidence || 0) * 100)}%</span>
-                    </div>
+                    <p style={{ marginTop: '10px', fontSize: '11px', color: '#6b7280', fontStyle: 'italic' }}>
+                      Area calculated from polygon boundary detected in blueprint using AI vision analysis.
+                      {result.scale?.detected && ` Scale: ${result.scale.scaleText || 'detected'}`}
+                    </p>
                   </div>
-                </label>
+                </ExpandableItem>
               ))}
             </div>
           </div>
@@ -836,36 +958,48 @@ function AnalysisResultsPanel({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {result.dimensions.map((dim) => (
-                <label
+                <ExpandableItem
                   key={dim.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '10px',
-                    padding: '10px 12px',
-                    background: selectedDimensions.has(dim.id) ? '#fef3c7' : '#f9fafb',
-                    border: `1px solid ${selectedDimensions.has(dim.id) ? '#fcd34d' : '#e5e7eb'}`,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                  }}
+                  id={dim.id}
+                  title={`${dim.text}`}
+                  subtitle={`${dim.value} ${dim.unit}${dim.measures ? ` - ${dim.measures}` : ''}`}
+                  confidence={dim.confidence || 0}
+                  isSelected={selectedDimensions.has(dim.id)}
+                  onToggleSelect={() => toggleSelection(dim.id, selectedDimensions, setSelectedDimensions)}
+                  bgColor="#fffbeb"
+                  selectedBgColor="#fef3c7"
+                  borderColor="#fde68a"
+                  selectedBorderColor="#fcd34d"
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedDimensions.has(dim.id)}
-                    onChange={() => toggleSelection(dim.id, selectedDimensions, setSelectedDimensions)}
-                    style={{ marginTop: '2px' }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>
-                      {dim.text} ({dim.value} {dim.unit})
-                    </div>
-                    {dim.measures && (
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
-                        {dim.measures}
+                  <div style={{ fontSize: '12px', color: '#374151' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '8px', color: '#111827' }}>Dimension Details:</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#fef9e7', borderRadius: '4px' }}>
+                        <span style={{ color: '#92400e' }}>Raw Text:</span>
+                        <span style={{ fontWeight: 500 }}>{dim.text}</span>
                       </div>
-                    )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#fef9e7', borderRadius: '4px' }}>
+                        <span style={{ color: '#92400e' }}>Value:</span>
+                        <span style={{ fontWeight: 500 }}>{dim.value} {dim.unit}</span>
+                      </div>
+                      {dim.measures && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#fef9e7', borderRadius: '4px' }}>
+                          <span style={{ color: '#92400e' }}>Applies to:</span>
+                          <span style={{ fontWeight: 500 }}>{dim.measures}</span>
+                        </div>
+                      )}
+                      {dim.position && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#fef9e7', borderRadius: '4px' }}>
+                          <span style={{ color: '#92400e' }}>Position:</span>
+                          <span style={{ fontWeight: 500 }}>X: {Math.round(dim.position[0])}, Y: {Math.round(dim.position[1])}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p style={{ marginTop: '10px', fontSize: '11px', color: '#92400e', fontStyle: 'italic' }}>
+                      Dimension text extracted from blueprint using OCR and pattern matching.
+                    </p>
                   </div>
-                </label>
+                </ExpandableItem>
               ))}
             </div>
           </div>
@@ -898,36 +1032,50 @@ function AnalysisResultsPanel({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {result.materials.map((mat) => (
-                <label
+                <ExpandableItem
                   key={mat.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '10px',
-                    padding: '10px 12px',
-                    background: selectedMaterials.has(mat.id) ? '#fce7f3' : '#f9fafb',
-                    border: `1px solid ${selectedMaterials.has(mat.id) ? '#f9a8d4' : '#e5e7eb'}`,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                  }}
+                  id={mat.id}
+                  title={mat.material}
+                  subtitle={mat.appliesTo ? `Applies to: ${mat.appliesTo}` : mat.category}
+                  confidence={mat.confidence || 0}
+                  isSelected={selectedMaterials.has(mat.id)}
+                  onToggleSelect={() => toggleSelection(mat.id, selectedMaterials, setSelectedMaterials)}
+                  bgColor="#fdf2f8"
+                  selectedBgColor="#fce7f3"
+                  borderColor="#fbcfe8"
+                  selectedBorderColor="#f9a8d4"
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedMaterials.has(mat.id)}
-                    onChange={() => toggleSelection(mat.id, selectedMaterials, setSelectedMaterials)}
-                    style={{ marginTop: '2px' }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>
-                      {mat.material}
-                    </div>
-                    {mat.appliesTo && (
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
-                        Applies to: {mat.appliesTo}
+                  <div style={{ fontSize: '12px', color: '#374151' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '8px', color: '#111827' }}>Material Details:</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#fdf2f8', borderRadius: '4px' }}>
+                        <span style={{ color: '#9d174d' }}>Material:</span>
+                        <span style={{ fontWeight: 500 }}>{mat.material}</span>
                       </div>
-                    )}
+                      {mat.category && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#fdf2f8', borderRadius: '4px' }}>
+                          <span style={{ color: '#9d174d' }}>Category:</span>
+                          <span style={{ fontWeight: 500 }}>{mat.category}</span>
+                        </div>
+                      )}
+                      {mat.appliesTo && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#fdf2f8', borderRadius: '4px' }}>
+                          <span style={{ color: '#9d174d' }}>Applies to:</span>
+                          <span style={{ fontWeight: 500 }}>{mat.appliesTo}</span>
+                        </div>
+                      )}
+                      {mat.quantity && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', background: '#fdf2f8', borderRadius: '4px' }}>
+                          <span style={{ color: '#9d174d' }}>Quantity:</span>
+                          <span style={{ fontWeight: 500 }}>{mat.quantity}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p style={{ marginTop: '10px', fontSize: '11px', color: '#9d174d', fontStyle: 'italic' }}>
+                      Material identified from blueprint annotations, legend, or specifications.
+                    </p>
                   </div>
-                </label>
+                </ExpandableItem>
               ))}
             </div>
           </div>
