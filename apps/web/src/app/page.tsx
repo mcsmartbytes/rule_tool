@@ -4,10 +4,29 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+// Tape measure logo component
+function TapeMeasureLogo({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {/* Tape measure body */}
+      <rect x="2" y="6" width="16" height="12" rx="2" fill="white" stroke="none" />
+      {/* Tape coming out */}
+      <path d="M18 12 L22 12" stroke="white" strokeWidth="3" />
+      {/* Measurement marks */}
+      <line x1="5" y1="9" x2="5" y2="11" stroke="#3b82f6" strokeWidth="1.5" />
+      <line x1="8" y1="9" x2="8" y2="12" stroke="#3b82f6" strokeWidth="1.5" />
+      <line x1="11" y1="9" x2="11" y2="11" stroke="#3b82f6" strokeWidth="1.5" />
+      <line x1="14" y1="9" x2="14" y2="12" stroke="#3b82f6" strokeWidth="1.5" />
+      {/* Hook at end */}
+      <path d="M22 10 L22 14" stroke="white" strokeWidth="2" />
+    </svg>
+  );
+}
+
 // Stats data
 const STATS = [
   { value: '5 min', label: 'Average estimate time' },
-  { value: '4', label: 'Trades in one measurement' },
+  { value: 'Multiple', label: 'Trades from one measurement' },
   { value: '90%', label: 'Faster than manual takeoffs' },
 ];
 
@@ -27,7 +46,7 @@ const STEPS = [
   {
     number: '2',
     title: 'Draw Once',
-    description: 'Trace parking lots, sidewalks, and surfaces on the satellite map',
+    description: 'Trace areas on the satellite map or upload blueprints for AI analysis',
     icon: (
       <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -37,7 +56,7 @@ const STEPS = [
   {
     number: '3',
     title: 'Get Multi-Trade Estimates',
-    description: 'Instantly see pricing for asphalt, sealcoating, striping & concrete',
+    description: 'Instantly see pricing across all your trades from a single measurement',
     icon: (
       <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -50,7 +69,7 @@ const STEPS = [
 const FEATURES = [
   {
     title: 'AI-Powered Detection',
-    description: 'Automatically detect parking lots, curbs, and surfaces from satellite imagery',
+    description: 'Automatically detect surfaces and features from satellite imagery',
     icon: '🤖',
   },
   {
@@ -60,7 +79,7 @@ const FEATURES = [
   },
   {
     title: 'Multi-Trade Pricing',
-    description: 'One measurement gives you estimates across all pavement trades',
+    description: 'One measurement gives you estimates across all your trades',
     icon: '💰',
   },
   {
@@ -78,7 +97,7 @@ const FAQS = [
   },
   {
     question: 'What trades are supported?',
-    answer: 'Currently we support Asphalt paving, Sealcoating, Parking lot Striping, and Concrete work. More trades are coming soon including landscaping and fencing.',
+    answer: 'We support a growing list of trades including paving, coating, striping, concrete, landscaping, fencing, and more. New trades are added regularly based on customer needs.',
   },
   {
     question: 'Can I upload my own blueprints?',
@@ -106,7 +125,11 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+      overflowX: 'hidden',
+    }}>
       {/* Navigation */}
       <nav style={{
         display: 'flex',
@@ -116,19 +139,17 @@ export default function HomePage() {
         maxWidth: '1200px',
         margin: '0 auto',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
-            width: '36px',
-            height: '36px',
+            width: '40px',
+            height: '40px',
             background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
             borderRadius: '10px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-            <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l4.59-4.58L18 11l-6 6z"/>
-            </svg>
+            <TapeMeasureLogo size={24} />
           </div>
           <span style={{ fontSize: '20px', fontWeight: 700, color: 'white' }}>Rule Tool</span>
         </div>
@@ -202,8 +223,8 @@ export default function HomePage() {
           margin: '0 auto 40px',
           lineHeight: 1.6,
         }}>
-          Stop measuring the same parking lot four times. Enter an address, trace your areas,
-          and get instant estimates for asphalt, sealcoating, striping, and concrete.
+          Stop measuring the same property multiple times. Enter an address, trace your areas,
+          and get instant estimates across all your trades.
         </p>
 
         {/* Main CTA Form */}
@@ -296,7 +317,8 @@ export default function HomePage() {
           color: '#94a3b8',
           marginBottom: '48px',
           maxWidth: '600px',
-          margin: '0 auto 48px',
+          marginLeft: 'auto',
+          marginRight: 'auto',
         }}>
           Get from address to multi-trade estimate in under 5 minutes
         </p>
@@ -361,7 +383,7 @@ export default function HomePage() {
             color: 'white',
             marginBottom: '48px',
           }}>
-            Built for Pavement Contractors
+            Built for Contractors
           </h2>
 
           <div style={{
@@ -402,7 +424,7 @@ export default function HomePage() {
           padding: '48px',
           border: '1px solid rgba(255,255,255,0.1)',
         }}>
-          <div style={{ fontSize: '48px', marginBottom: '24px' }}>"</div>
+          <div style={{ fontSize: '48px', marginBottom: '24px', color: '#60a5fa' }}>&ldquo;</div>
           <p style={{
             fontSize: '20px',
             color: 'white',
@@ -410,12 +432,12 @@ export default function HomePage() {
             marginBottom: '24px',
             fontStyle: 'italic',
           }}>
-            We used to spend an hour measuring each parking lot for different trades.
+            We used to spend an hour measuring each property for different trades.
             Now I draw it once and have all my estimates in minutes. Game changer for our bid volume.
           </p>
           <div>
             <div style={{ fontWeight: 600, color: 'white' }}>Mike R.</div>
-            <div style={{ fontSize: '14px', color: '#94a3b8' }}>Pavement Contractor, Texas</div>
+            <div style={{ fontSize: '14px', color: '#94a3b8' }}>Contractor, Texas</div>
           </div>
         </div>
       </section>
@@ -545,6 +567,7 @@ export default function HomePage() {
               fontSize: '16px',
               fontWeight: 600,
               border: '1px solid rgba(255,255,255,0.3)',
+              display: 'inline-block',
             }}
           >
             Book a Demo
@@ -558,7 +581,7 @@ export default function HomePage() {
         borderTop: '1px solid rgba(255,255,255,0.1)',
         textAlign: 'center',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginBottom: '20px', flexWrap: 'wrap' }}>
           <Link href="/dashboard" style={{ color: '#64748b', textDecoration: 'none', fontSize: '14px' }}>
             Dashboard
           </Link>
@@ -569,8 +592,8 @@ export default function HomePage() {
             Contact
           </a>
         </div>
-        <p style={{ fontSize: '13px', color: '#475569' }}>
-          © {new Date().getFullYear()} Rule Tool. Built for pavement contractors.
+        <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>
+          &copy; {new Date().getFullYear()} Rule Tool. Built for contractors.
         </p>
       </footer>
     </div>
