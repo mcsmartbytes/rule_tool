@@ -13,9 +13,10 @@ import type {
   DetectedMaterial,
 } from '@/lib/blueprint/analysis-types';
 
-// Set worker path for pdf.js - use unpkg CDN which has all versions
+// Set worker path for pdf.js v5.x - use cdnjs which is more reliable
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  // pdfjs-dist v5.x uses a different worker structure
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 }
 
 interface PageWithUrls extends PDFPage {
@@ -67,11 +68,23 @@ function ClientRenderedPage({
         setIsRendering(true);
         setError(null);
 
-        // Load the PDF
-        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        // Check if pdfUrl is valid
+        if (!pdfUrl) {
+          throw new Error('No PDF URL available');
+        }
+
+        console.log(`Loading PDF from: ${pdfUrl.substring(0, 100)}...`);
+
+        // Load the PDF with CORS settings
+        const loadingTask = pdfjsLib.getDocument({
+          url: pdfUrl,
+          withCredentials: false,
+        });
         const pdf = await loadingTask.promise;
 
         if (cancelled) return;
+
+        console.log(`PDF loaded, getting page ${pageNumber} of ${pdf.numPages}`);
 
         // Get the page
         const page = await pdf.getPage(pageNumber);
@@ -104,10 +117,12 @@ function ClientRenderedPage({
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         setImageDataUrl(dataUrl);
         setIsRendering(false);
+        console.log(`Page ${pageNumber} rendered successfully`);
       } catch (err) {
         if (!cancelled) {
+          const errorMsg = err instanceof Error ? err.message : 'Unknown error';
           console.error(`Failed to render page ${pageNumber}:`, err);
-          setError('Failed to render');
+          setError(`Render failed: ${errorMsg}`);
           setIsRendering(false);
         }
       }
