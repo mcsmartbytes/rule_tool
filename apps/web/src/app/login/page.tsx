@@ -49,6 +49,7 @@ export default function LoginPage() {
     const { error } = await signIn(email, password);
 
     if (!error) {
+      router.refresh();
       router.push('/dashboard');
     }
   };

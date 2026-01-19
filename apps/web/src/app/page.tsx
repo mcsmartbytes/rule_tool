@@ -246,7 +246,25 @@ export default function HomePage() {
         padding: '60px 20px 80px',
         maxWidth: '800px',
         margin: '0 auto',
+        position: 'relative',
       }}>
+        {/* Background image */}
+        <div style={{
+          position: 'absolute',
+          top: '-100px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '120%',
+          height: '600px',
+          backgroundImage: 'url(/hero-bg.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.15,
+          pointerEvents: 'none',
+          zIndex: 0,
+          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 70%)',
+        }} />
         <div style={{
           display: 'inline-block',
           padding: '6px 16px',
@@ -257,6 +275,8 @@ export default function HomePage() {
           fontWeight: 500,
           marginBottom: '24px',
           border: '1px solid rgba(59, 130, 246, 0.3)',
+          position: 'relative',
+          zIndex: 1,
         }}>
           SITE-FIRST ESTIMATING
         </div>
@@ -267,6 +287,8 @@ export default function HomePage() {
           color: 'white',
           lineHeight: 1.1,
           margin: '0 0 20px',
+          position: 'relative',
+          zIndex: 1,
         }}>
           Draw once, estimate across<br />
           <span style={{ color: '#60a5fa' }}>multiple trades</span> automatically
@@ -278,6 +300,8 @@ export default function HomePage() {
           maxWidth: '600px',
           margin: '0 auto 40px',
           lineHeight: 1.6,
+          position: 'relative',
+          zIndex: 1,
         }}>
           Stop measuring the same property multiple times. Enter an address, trace your areas,
           and get instant estimates across all your trades.
@@ -291,6 +315,8 @@ export default function HomePage() {
           margin: '0 auto 24px',
           flexWrap: 'wrap',
           justifyContent: 'center',
+          position: 'relative',
+          zIndex: 1,
         }}>
           <input
             type="text"
@@ -328,7 +354,7 @@ export default function HomePage() {
           </button>
         </form>
 
-        <p style={{ fontSize: '14px', color: '#64748b' }}>
+        <p style={{ fontSize: '14px', color: '#64748b', position: 'relative', zIndex: 1 }}>
           No signup required. Start estimating in seconds.
         </p>
       </section>
