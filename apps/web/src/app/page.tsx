@@ -149,11 +149,11 @@ export default function HomePage() {
     <div
       className="home-hero-bg"
       style={{
-        ['--hero-image' as React.CSSProperties['--hero-image']]: `url(${heroImage.src})`,
-      minHeight: '100vh',
-      backgroundColor: 'rgba(255,255,255,0.08)',
-      backgroundBlendMode: 'screen',
-      overflowX: 'hidden',
+        minHeight: '100vh',
+        backgroundImage: `url(${heroImage.src})`,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        backgroundBlendMode: 'screen',
+        overflowX: 'hidden',
       }}
     >
       {/* Navigation */}
