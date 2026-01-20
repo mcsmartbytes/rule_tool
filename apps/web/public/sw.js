@@ -1,4 +1,4 @@
-const CACHE_NAME = 'area-bid-pro-v1';
+const CACHE_NAME = 'area-bid-pro-v2';
 const STATIC_ASSETS = [
   '/',
   '/favicon.ico',
