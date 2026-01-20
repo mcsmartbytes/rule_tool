@@ -161,7 +161,7 @@ export default function HomePage() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '16px 24px',
+        padding: '12px 16px',
         maxWidth: '100%',
         margin: '0',
       }}>
