@@ -161,9 +161,9 @@ export default function HomePage() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '20px 40px',
-        maxWidth: '1200px',
-        margin: '0 auto',
+        padding: '16px 24px',
+        maxWidth: '100%',
+        margin: '0',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Image
