@@ -164,6 +164,10 @@ export default function HomePage() {
         padding: '12px 16px',
         maxWidth: '100%',
         margin: '0',
+        background: 'rgba(10, 16, 24, 0.35)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Image
