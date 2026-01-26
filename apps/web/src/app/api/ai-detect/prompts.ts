@@ -8,13 +8,127 @@ export interface PromptContext {
   imageHeight: number;
   scale: number; // feet per pixel
   industry?: 'asphalt' | 'sealcoating' | 'concrete' | 'striping' | 'all';
+  featureTypes?: string[]; // Optional: specific feature types to detect
+}
+
+// Feature type definitions for selective detection
+const FEATURE_DEFINITIONS: Record<string, { category: string; description: string }> = {
+  'building-footprint': { category: 'structures', description: 'All rooftops, structures, and covered areas including HVAC units, overhangs, canopies' },
+  'parking-surface': { category: 'surfaces', description: 'Dark gray/black asphalt parking areas' },
+  'drive-lane': { category: 'surfaces', description: 'Traffic lanes and driveways' },
+  'loading-area': { category: 'surfaces', description: 'Loading docks and delivery zones' },
+  'sidewalk': { category: 'surfaces', description: 'Light gray concrete pedestrian walkways' },
+  'plaza': { category: 'surfaces', description: 'Open paved gathering areas' },
+  'curb': { category: 'linear', description: 'Edge lines between pavement and landscaping' },
+  'crack': { category: 'linear', description: 'Visible deterioration lines in pavement' },
+  'edge-line': { category: 'linear', description: 'Painted boundary lines' },
+  'fire-lane': { category: 'linear', description: 'Red curb markings for fire access' },
+  'parking-stall': { category: 'striping', description: 'Individual parking space lines' },
+  'directional-arrow': { category: 'striping', description: 'Turn arrows and directional indicators' },
+  'ada-space': { category: 'striping', description: 'Handicap parking with blue striping' },
+  'crosswalk': { category: 'striping', description: 'Pedestrian crossing stripes' },
+  'symbol': { category: 'striping', description: 'Painted symbols and stencils' },
+  'median': { category: 'structures', description: 'Raised dividers in parking areas' },
+  'island': { category: 'structures', description: 'Landscaped or concrete islands' },
+  'ada-ramp': { category: 'structures', description: 'Curb cut ramps for accessibility' },
+};
+
+function buildFeatureInstructions(featureTypes?: string[]): string {
+  // If no specific types, return full detection instructions
+  if (!featureTypes || featureTypes.length === 0) {
+    return `Identify and outline ALL of the following feature types with PIXEL coordinates:
+
+### 1. BUILDING FOOTPRINTS (Priority: High)
+- All rooftops, structures, and covered areas
+- Include HVAC units, overhangs, canopies
+- Type: "building-footprint"
+- These will be EXCLUDED from pavement measurements
+
+### 2. PAVEMENT SURFACES (Priority: High)
+Identify paved areas by material when visible:
+- **Asphalt**: Dark gray/black surfaces, parking lots, driveways
+- **Concrete**: Light gray surfaces, sidewalks, loading docks
+- Types: "parking-surface", "drive-lane", "loading-area", "sidewalk", "plaza"
+- SubTypes: "asphalt", "concrete", "gravel"
+
+### 3. LINEAR FEATURES
+- **Curbs**: Edge lines between pavement and landscaping
+- **Cracks**: Visible deterioration lines in pavement
+- **Edge lines**: Painted boundary lines
+- Types: "curb", "crack", "edge-line", "fire-lane"
+
+### 4. STRIPING & MARKINGS
+- **Parking stalls**: Individual parking space lines
+- **Directional arrows**: Turn arrows, directional indicators
+- **ADA spaces**: Handicap parking (often blue striping)
+- **Fire lanes**: Red curb markings
+- **Crosswalks**: Pedestrian crossing stripes
+- Types: "parking-stall", "directional-arrow", "ada-space", "fire-lane", "crosswalk", "symbol"
+
+### 5. STRUCTURES
+- **Medians**: Raised dividers in parking areas
+- **Islands**: Landscaped or concrete islands
+- **ADA ramps**: Curb cut ramps
+- Types: "median", "island", "ada-ramp"`;
+  }
+
+  // Build selective instructions based on requested feature types
+  const requestedFeatures = featureTypes
+    .filter(ft => FEATURE_DEFINITIONS[ft])
+    .map(ft => ({
+      type: ft,
+      ...FEATURE_DEFINITIONS[ft],
+    }));
+
+  if (requestedFeatures.length === 0) {
+    return buildFeatureInstructions([]); // Fallback to all
+  }
+
+  // Group by category
+  const byCategory: Record<string, typeof requestedFeatures> = {};
+  for (const feature of requestedFeatures) {
+    if (!byCategory[feature.category]) {
+      byCategory[feature.category] = [];
+    }
+    byCategory[feature.category].push(feature);
+  }
+
+  const categoryNames: Record<string, string> = {
+    structures: 'STRUCTURES & BUILDINGS',
+    surfaces: 'PAVEMENT SURFACES',
+    linear: 'LINEAR FEATURES',
+    striping: 'STRIPING & MARKINGS',
+  };
+
+  let instructions = `Identify and outline ONLY the following specific feature types with PIXEL coordinates:
+
+**IMPORTANT: Only detect the feature types listed below. Ignore all other features.**
+
+`;
+
+  let sectionNum = 1;
+  for (const [category, features] of Object.entries(byCategory)) {
+    instructions += `### ${sectionNum}. ${categoryNames[category] || category.toUpperCase()}\n`;
+    for (const feature of features) {
+      instructions += `- **${feature.type}**: ${feature.description}\n`;
+    }
+    instructions += `- Types: ${features.map(f => `"${f.type}"`).join(', ')}\n\n`;
+    sectionNum++;
+  }
+
+  return instructions;
 }
 
 export function buildDetectionPrompt(context: PromptContext): string {
   const industryInstructions = getIndustryInstructions(context.industry || 'all');
+  const featureInstructions = buildFeatureInstructions(context.featureTypes);
+
+  const focusNote = context.featureTypes && context.featureTypes.length > 0
+    ? `\n**FOCUS MODE**: You are detecting only ${context.featureTypes.length} specific feature type(s). Do NOT detect features outside of this list.\n`
+    : '';
 
   return `You are a site survey AI analyzing satellite imagery for commercial property estimation. Your task is to identify and outline specific features relevant for contractors.
-
+${focusNote}
 ## IMAGE CONTEXT
 - Satellite image at zoom level ${context.zoom}
 - Image dimensions: ${context.imageWidth} x ${context.imageHeight} pixels
@@ -22,7 +136,7 @@ export function buildDetectionPrompt(context: PromptContext): string {
 
 ## DETECTION REQUIREMENTS
 
-Identify and outline ALL of the following feature types with PIXEL coordinates:
+${featureInstructions}
 
 ### 1. BUILDING FOOTPRINTS (Priority: High)
 - All rooftops, structures, and covered areas

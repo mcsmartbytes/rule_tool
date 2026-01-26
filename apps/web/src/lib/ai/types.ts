@@ -18,6 +18,7 @@ export interface AIDetectRequest {
   imageWidth: number;         // Canvas width in pixels
   imageHeight: number;        // Canvas height in pixels
   industry?: 'asphalt' | 'sealcoating' | 'concrete' | 'striping' | 'all';
+  featureTypes?: string[];    // Optional: specific feature types to detect (empty = all)
 }
 
 export interface AIDetectedFeature {
