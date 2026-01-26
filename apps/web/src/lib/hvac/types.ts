@@ -1018,3 +1018,10 @@ export type ClimateZone =
   | '6a' | '6b'
   | '7'
   | '8';
+
+// Checklist item status for the master HVAC estimating checklist
+export type ChecklistStatus =
+  | 'not_started'
+  | 'in_progress'
+  | 'complete'
+  | 'not_applicable';
