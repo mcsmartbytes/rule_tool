@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    const thumbnail = formData.get('thumbnail') as File | null;
     const siteId = formData.get('siteId') as string | null;
     const category = (formData.get('category') as SiteMediaCategory) || 'other';
     const caption = formData.get('caption') as string | null;
@@ -135,8 +136,9 @@ export async function POST(request: NextRequest) {
 
     // Generate unique file path
     const timestamp = Date.now();
+    const uniqueId = Math.random().toString(36).slice(2);
     const ext = file.name.split('.').pop() || (isImage ? 'jpg' : 'mp4');
-    const storagePath = `${siteId}/${timestamp}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const storagePath = `${siteId}/${timestamp}-${uniqueId}.${ext}`;
 
     // Upload to storage
     const arrayBuffer = await file.arrayBuffer();
@@ -155,6 +157,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Upload thumbnail if provided (for videos)
+    let thumbnailPath: string | null = null;
+    if (thumbnail && isVideo) {
+      thumbnailPath = `${siteId}/thumbs/${timestamp}-${uniqueId}.jpg`;
+      const thumbArrayBuffer = await thumbnail.arrayBuffer();
+      const { error: thumbError } = await supabase.storage
+        .from('site-media')
+        .upload(thumbnailPath, thumbArrayBuffer, {
+          contentType: 'image/jpeg',
+          upsert: false,
+        });
+
+      if (thumbError) {
+        console.error('Thumbnail upload error:', thumbError);
+        // Continue without thumbnail - not critical
+        thumbnailPath = null;
+      }
+    }
+
     // Create database record
     const mediaRecord = {
       site_id: siteId,
@@ -162,7 +183,7 @@ export async function POST(request: NextRequest) {
       media_type: getMediaType(file.type),
       category,
       storage_path: storagePath,
-      thumbnail_path: null, // TODO: Generate thumbnails for videos
+      thumbnail_path: thumbnailPath,
       file_name: file.name,
       file_size: file.size,
       mime_type: file.type,

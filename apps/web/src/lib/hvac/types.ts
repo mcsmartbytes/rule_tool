@@ -975,3 +975,46 @@ export interface GenerateEstimateRequest {
     profit: number;
   };
 }
+
+// ============================================================================
+// TYPE ALIASES (for form compatibility)
+// ============================================================================
+
+// Extended building types for the project wizard form
+export type BuildingType =
+  | 'office'
+  | 'retail'
+  | 'healthcare'
+  | 'education'
+  | 'industrial'
+  | 'warehouse'
+  | 'residential_multi'
+  | 'hospitality'
+  | 'restaurant'
+  | 'data_center'
+  | 'laboratory'
+  | 'mixed_use'
+  | 'other';
+
+// System archetype for HVAC system selection
+export type SystemArchetype =
+  | 'vav_central'
+  | 'vrf'
+  | 'rooftop_units'
+  | 'split_systems'
+  | 'chilled_beams'
+  | 'doas_radiant'
+  | 'geothermal'
+  | 'district'
+  | 'hybrid';
+
+// ASHRAE climate zones
+export type ClimateZone =
+  | '1a' | '1b'
+  | '2a' | '2b'
+  | '3a' | '3b' | '3c'
+  | '4a' | '4b' | '4c'
+  | '5a' | '5b' | '5c'
+  | '6a' | '6b'
+  | '7'
+  | '8';

@@ -170,17 +170,42 @@ export default function NewProjectWizard() {
 
     setIsSubmitting(true);
     try {
-      // TODO: Implement actual API call
-      console.log('Creating project:', formData);
-      console.log('Uploaded files:', uploadedFiles);
+      // Create the project via API
+      const response = await fetch('/api/hvac/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await response.json();
 
-      // Navigate to projects list
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create project');
+      }
+
+      const projectId = result.project.id;
+
+      // Upload documents if any
+      if (uploadedFiles.length > 0) {
+        for (const file of uploadedFiles) {
+          const docFormData = new FormData();
+          docFormData.append('file', file);
+          docFormData.append('projectId', projectId);
+
+          await fetch('/api/hvac/documents', {
+            method: 'POST',
+            body: docFormData,
+          });
+        }
+      }
+
+      // Navigate to projects list (project detail page to be implemented)
       router.push('/hvac/projects');
     } catch (error) {
       console.error('Failed to create project:', error);
+      alert(error instanceof Error ? error.message : 'Failed to create project');
     } finally {
       setIsSubmitting(false);
     }
