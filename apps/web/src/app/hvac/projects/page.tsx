@@ -3,20 +3,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useHvacStore } from '@/lib/hvac';
-import type { HvacProject, ProjectStatus, BuildingType } from '@/lib/hvac/types';
-
-// Format currency helper
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+import type { HvacProject, HvacProjectStatus, HvacBuildingType } from '@/lib/hvac/types';
 
 // Status configuration
-const STATUS_CONFIG: Record<ProjectStatus, { bg: string; text: string; label: string }> = {
+const STATUS_CONFIG: Record<HvacProjectStatus, { bg: string; text: string; label: string }> = {
   draft: { bg: '#f3f4f6', text: '#4b5563', label: 'Draft' },
   in_progress: { bg: '#dbeafe', text: '#1d4ed8', label: 'In Progress' },
   review: { bg: '#fef3c7', text: '#d97706', label: 'Review' },
@@ -27,31 +17,29 @@ const STATUS_CONFIG: Record<ProjectStatus, { bg: string; text: string; label: st
 };
 
 // Building type labels
-const BUILDING_TYPE_LABELS: Record<BuildingType, string> = {
+const BUILDING_TYPE_LABELS: Record<HvacBuildingType, string> = {
+  single_family: 'Single Family',
+  multi_family: 'Multi-Family',
   office: 'Office',
   retail: 'Retail',
-  healthcare: 'Healthcare',
-  education: 'Education',
-  industrial: 'Industrial',
-  warehouse: 'Warehouse',
-  residential_multi: 'Multi-Family Residential',
-  hospitality: 'Hospitality',
   restaurant: 'Restaurant',
-  data_center: 'Data Center',
-  laboratory: 'Laboratory',
+  warehouse: 'Warehouse',
+  school: 'School',
+  healthcare: 'Healthcare',
+  industrial: 'Industrial',
   mixed_use: 'Mixed Use',
   other: 'Other',
 };
 
-type SortField = 'name' | 'created_at' | 'due_date' | 'total_estimated_cost' | 'status';
+type SortField = 'name' | 'created_at' | 'bid_due_date' | 'total_sqft' | 'status';
 type SortDirection = 'asc' | 'desc';
 type ViewMode = 'grid' | 'list';
 
 export default function HvacProjectsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'all'>('all');
-  const [buildingTypeFilter, setBuildingTypeFilter] = useState<BuildingType | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<HvacProjectStatus | 'all'>('all');
+  const [buildingTypeFilter, setBuildingTypeFilter] = useState<HvacBuildingType | 'all'>('all');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -70,13 +58,11 @@ export default function HvacProjectsPage() {
           client_name: 'Metro Healthcare Systems',
           project_number: 'HVAC-2024-001',
           building_type: 'healthcare',
-          square_footage: 125000,
+          total_sqft: 125000,
           num_floors: 5,
           climate_zone: '4a',
           status: 'in_progress',
-          due_date: '2024-02-15',
-          total_estimated_cost: 2850000,
-          confidence_score: 82,
+          bid_due_date: '2024-02-15',
           created_at: '2024-01-10T10:00:00Z',
           updated_at: new Date().toISOString(),
         },
@@ -87,11 +73,11 @@ export default function HvacProjectsPage() {
           client_name: 'Silicon Valley Innovations',
           project_number: 'HVAC-2024-002',
           building_type: 'office',
-          square_footage: 75000,
+          total_sqft: 75000,
           num_floors: 3,
           climate_zone: '3c',
           status: 'draft',
-          due_date: '2024-03-01',
+          bid_due_date: '2024-03-01',
           created_at: '2024-01-15T14:30:00Z',
           updated_at: new Date().toISOString(),
         },
@@ -101,14 +87,12 @@ export default function HvacProjectsPage() {
           name: 'Riverside Apartments Complex',
           client_name: 'Urban Living Developments',
           project_number: 'HVAC-2024-003',
-          building_type: 'residential_multi',
-          square_footage: 200000,
+          building_type: 'multi_family',
+          total_sqft: 200000,
           num_floors: 12,
           climate_zone: '5a',
           status: 'review',
-          due_date: '2024-02-01',
-          total_estimated_cost: 1650000,
-          confidence_score: 75,
+          bid_due_date: '2024-02-01',
           created_at: '2024-01-08T09:15:00Z',
           updated_at: new Date().toISOString(),
         },
@@ -118,14 +102,12 @@ export default function HvacProjectsPage() {
           name: 'Central Data Center',
           client_name: 'CloudTech Solutions',
           project_number: 'HVAC-2024-004',
-          building_type: 'data_center',
-          square_footage: 50000,
+          building_type: 'industrial',
+          total_sqft: 50000,
           num_floors: 2,
           climate_zone: '4a',
           status: 'submitted',
-          due_date: '2024-01-25',
-          total_estimated_cost: 4200000,
-          confidence_score: 90,
+          bid_due_date: '2024-01-25',
           created_at: '2024-01-05T11:00:00Z',
           updated_at: new Date().toISOString(),
         },
@@ -136,13 +118,11 @@ export default function HvacProjectsPage() {
           client_name: 'Premier Properties',
           project_number: 'HVAC-2024-005',
           building_type: 'retail',
-          square_footage: 85000,
+          total_sqft: 85000,
           num_floors: 2,
           climate_zone: '3b',
           status: 'won',
-          due_date: '2024-01-10',
-          total_estimated_cost: 920000,
-          confidence_score: 88,
+          bid_due_date: '2024-01-10',
           created_at: '2023-12-20T16:45:00Z',
           updated_at: new Date().toISOString(),
         },
@@ -152,14 +132,12 @@ export default function HvacProjectsPage() {
           name: 'University Science Building',
           client_name: 'State University',
           project_number: 'HVAC-2024-006',
-          building_type: 'laboratory',
-          square_footage: 60000,
+          building_type: 'school',
+          total_sqft: 60000,
           num_floors: 4,
           climate_zone: '5a',
           status: 'lost',
-          due_date: '2024-01-15',
-          total_estimated_cost: 3100000,
-          confidence_score: 78,
+          bid_due_date: '2024-01-15',
           created_at: '2023-12-15T10:30:00Z',
           updated_at: new Date().toISOString(),
         },
@@ -203,13 +181,13 @@ export default function HvacProjectsPage() {
         case 'created_at':
           comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           break;
-        case 'due_date':
-          const aDate = a.due_date ? new Date(a.due_date).getTime() : 0;
-          const bDate = b.due_date ? new Date(b.due_date).getTime() : 0;
+        case 'bid_due_date':
+          const aDate = a.bid_due_date ? new Date(a.bid_due_date).getTime() : 0;
+          const bDate = b.bid_due_date ? new Date(b.bid_due_date).getTime() : 0;
           comparison = aDate - bDate;
           break;
-        case 'total_estimated_cost':
-          comparison = (a.total_estimated_cost || 0) - (b.total_estimated_cost || 0);
+        case 'total_sqft':
+          comparison = (a.total_sqft || 0) - (b.total_sqft || 0);
           break;
         case 'status':
           const statusOrder = ['draft', 'in_progress', 'review', 'submitted', 'won', 'lost', 'archived'];
@@ -228,9 +206,9 @@ export default function HvacProjectsPage() {
     active: projects.filter(p => ['draft', 'in_progress', 'review'].includes(p.status)).length,
     submitted: projects.filter(p => p.status === 'submitted').length,
     won: projects.filter(p => p.status === 'won').length,
-    totalValue: projects
+    totalSqft: projects
       .filter(p => !['lost', 'archived'].includes(p.status))
-      .reduce((sum, p) => sum + (p.total_estimated_cost || 0), 0),
+      .reduce((sum, p) => sum + (p.total_sqft || 0), 0),
   }), [projects]);
 
   if (isLoading) {
@@ -313,8 +291,8 @@ export default function HvacProjectsPage() {
         </div>
         <div style={{ width: '1px', backgroundColor: '#e5e7eb' }} />
         <div>
-          <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pipeline Value</p>
-          <p style={{ fontSize: '20px', fontWeight: 700, color: '#059669', margin: 0 }}>{formatCurrency(stats.totalValue)}</p>
+          <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Sq Ft</p>
+          <p style={{ fontSize: '20px', fontWeight: 700, color: '#059669', margin: 0 }}>{stats.totalSqft.toLocaleString()} SF</p>
         </div>
       </div>
 
@@ -355,7 +333,7 @@ export default function HvacProjectsPage() {
         {/* Status filter */}
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as ProjectStatus | 'all')}
+          onChange={(e) => setStatusFilter(e.target.value as HvacProjectStatus | 'all')}
           style={{
             padding: '10px 32px 10px 12px',
             border: '1px solid #e5e7eb',
@@ -374,7 +352,7 @@ export default function HvacProjectsPage() {
         {/* Building type filter */}
         <select
           value={buildingTypeFilter}
-          onChange={(e) => setBuildingTypeFilter(e.target.value as BuildingType | 'all')}
+          onChange={(e) => setBuildingTypeFilter(e.target.value as HvacBuildingType | 'all')}
           style={{
             padding: '10px 32px 10px 12px',
             border: '1px solid #e5e7eb',
@@ -411,10 +389,10 @@ export default function HvacProjectsPage() {
           <option value="created_at-asc">Oldest First</option>
           <option value="name-asc">Name A-Z</option>
           <option value="name-desc">Name Z-A</option>
-          <option value="due_date-asc">Due Date (Earliest)</option>
-          <option value="due_date-desc">Due Date (Latest)</option>
-          <option value="total_estimated_cost-desc">Value (High to Low)</option>
-          <option value="total_estimated_cost-asc">Value (Low to High)</option>
+          <option value="bid_due_date-asc">Bid Due (Earliest)</option>
+          <option value="bid_due_date-desc">Bid Due (Latest)</option>
+          <option value="total_sqft-desc">Total Sq Ft (High to Low)</option>
+          <option value="total_sqft-asc">Total Sq Ft (Low to High)</option>
         </select>
 
         {/* View toggle */}
@@ -482,8 +460,7 @@ export default function HvacProjectsPage() {
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Type</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Status</th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Due Date</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '13px', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Value</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Confidence</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '13px', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Total Sq Ft</th>
               </tr>
             </thead>
             <tbody>
@@ -528,7 +505,7 @@ export default function HvacProjectsPage() {
 function ProjectGridCard({ project }: { project: HvacProject }) {
   const status = STATUS_CONFIG[project.status] || STATUS_CONFIG.draft;
   const buildingType = project.building_type ? BUILDING_TYPE_LABELS[project.building_type] : null;
-  const dueDate = project.due_date ? new Date(project.due_date) : null;
+  const dueDate = project.bid_due_date ? new Date(project.bid_due_date) : null;
   const now = new Date();
   const isOverdue = dueDate && dueDate < now && !['won', 'lost', 'archived'].includes(project.status);
 
@@ -608,12 +585,12 @@ function ProjectGridCard({ project }: { project: HvacProject }) {
               {buildingType}
             </div>
           )}
-          {project.square_footage && (
+          {project.total_sqft && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '13px' }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
               </svg>
-              {project.square_footage.toLocaleString()} sf
+              {project.total_sqft.toLocaleString()} sf
             </div>
           )}
         </div>
@@ -634,40 +611,6 @@ function ProjectGridCard({ project }: { project: HvacProject }) {
         )}
       </div>
 
-      {/* Footer */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: '12px',
-        borderTop: '1px solid #f3f4f6',
-      }}>
-        {project.total_estimated_cost ? (
-          <span style={{ fontSize: '16px', fontWeight: 700, color: '#059669' }}>
-            {formatCurrency(project.total_estimated_cost)}
-          </span>
-        ) : (
-          <span style={{ fontSize: '13px', color: '#9ca3af' }}>No estimate yet</span>
-        )}
-        {project.confidence_score && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '4px 8px',
-            borderRadius: '6px',
-            backgroundColor: project.confidence_score >= 80 ? '#dcfce7' : project.confidence_score >= 60 ? '#fef3c7' : '#fee2e2',
-            color: project.confidence_score >= 80 ? '#16a34a' : project.confidence_score >= 60 ? '#d97706' : '#dc2626',
-            fontSize: '13px',
-            fontWeight: 500,
-          }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            {project.confidence_score}%
-          </div>
-        )}
-      </div>
     </Link>
   );
 }
@@ -676,7 +619,7 @@ function ProjectGridCard({ project }: { project: HvacProject }) {
 function ProjectListRow({ project }: { project: HvacProject }) {
   const status = STATUS_CONFIG[project.status] || STATUS_CONFIG.draft;
   const buildingType = project.building_type ? BUILDING_TYPE_LABELS[project.building_type] : '-';
-  const dueDate = project.due_date ? new Date(project.due_date) : null;
+  const dueDate = project.bid_due_date ? new Date(project.bid_due_date) : null;
   const now = new Date();
   const isOverdue = dueDate && dueDate < now && !['won', 'lost', 'archived'].includes(project.status);
 
@@ -723,21 +666,7 @@ function ProjectListRow({ project }: { project: HvacProject }) {
         {dueDate ? dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
       </td>
       <td style={{ padding: '14px 16px', borderBottom: '1px solid #f3f4f6', fontSize: '14px', fontWeight: 600, color: '#059669', textAlign: 'right' }}>
-        {project.total_estimated_cost ? formatCurrency(project.total_estimated_cost) : '-'}
-      </td>
-      <td style={{ padding: '14px 16px', borderBottom: '1px solid #f3f4f6', textAlign: 'center' }}>
-        {project.confidence_score ? (
-          <span style={{
-            padding: '4px 8px',
-            fontSize: '12px',
-            fontWeight: 500,
-            borderRadius: '6px',
-            backgroundColor: project.confidence_score >= 80 ? '#dcfce7' : project.confidence_score >= 60 ? '#fef3c7' : '#fee2e2',
-            color: project.confidence_score >= 80 ? '#16a34a' : project.confidence_score >= 60 ? '#d97706' : '#dc2626',
-          }}>
-            {project.confidence_score}%
-          </span>
-        ) : '-'}
+        {project.total_sqft ? `${project.total_sqft.toLocaleString()} SF` : '-'}
       </td>
     </tr>
   );

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useHvacStore } from '@/lib/hvac';
-import type { HvacProject, ProjectStatus, HvacEquipment, HvacDuctwork, HvacAirDevice, HvacChecklist, HvacRiskFlag } from '@/lib/hvac/types';
+import type { HvacProject, HvacProjectStatus, HvacEquipment, HvacDuctwork, HvacAirDevice, HvacChecklist, HvacRiskFlag } from '@/lib/hvac/types';
 
 // Format currency helper
 function formatCurrency(value: number): string {
@@ -17,7 +17,7 @@ function formatCurrency(value: number): string {
 }
 
 // Status configuration
-const STATUS_CONFIG: Record<ProjectStatus, { bg: string; text: string; label: string }> = {
+const STATUS_CONFIG: Record<HvacProjectStatus, { bg: string; text: string; label: string }> = {
   draft: { bg: '#f3f4f6', text: '#4b5563', label: 'Draft' },
   in_progress: { bg: '#dbeafe', text: '#1d4ed8', label: 'In Progress' },
   review: { bg: '#fef3c7', text: '#d97706', label: 'Review' },
@@ -104,17 +104,15 @@ export default function ProjectDetailPage() {
         client_name: 'Metro Healthcare Systems',
         project_number: 'HVAC-2024-001',
         building_type: 'healthcare',
-        square_footage: 125000,
+        total_sqft: 125000,
         num_floors: 5,
         climate_zone: '4a',
         status: 'in_progress',
-        due_date: '2024-02-15',
-        total_estimated_cost: 2850000,
-        confidence_score: 82,
+        bid_due_date: '2024-02-15',
         address: '123 Medical Center Drive',
         city: 'Denver',
         state: 'CO',
-        zip_code: '80202',
+        zip: '80202',
         created_at: '2024-01-10T10:00:00Z',
         updated_at: new Date().toISOString(),
       });
@@ -301,14 +299,14 @@ export default function ProjectDetailPage() {
                 marginBottom: '24px',
               }}>
                 <MetricCard
-                  label="Estimated Value"
-                  value={project.total_estimated_cost ? formatCurrency(project.total_estimated_cost) : '-'}
+                  label="Total Sq Ft"
+                  value={project.total_sqft ? `${project.total_sqft.toLocaleString()} SF` : '-'}
                   color="#059669"
                 />
                 <MetricCard
-                  label="Confidence"
-                  value={project.confidence_score ? `${project.confidence_score}%` : '-'}
-                  color={project.confidence_score && project.confidence_score >= 80 ? '#059669' : '#f59e0b'}
+                  label="Bid Due"
+                  value={project.bid_due_date ? new Date(project.bid_due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+                  color="#f59e0b"
                 />
                 <MetricCard
                   label="Checklist"
@@ -428,13 +426,13 @@ export default function ProjectDetailPage() {
                 </h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <DetailRow label="Building Type" value={project.building_type?.replace('_', ' ') || '-'} />
-                  <DetailRow label="Square Footage" value={project.square_footage ? `${project.square_footage.toLocaleString()} sf` : '-'} />
+                  <DetailRow label="Total Sq Ft" value={project.total_sqft ? `${project.total_sqft.toLocaleString()} sf` : '-'} />
                   <DetailRow label="Floors" value={project.num_floors || '-'} />
                   <DetailRow label="Climate Zone" value={project.climate_zone || '-'} />
                   <DetailRow label="Location" value={project.city && project.state ? `${project.city}, ${project.state}` : '-'} />
                   <DetailRow
                     label="Due Date"
-                    value={project.due_date ? new Date(project.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+                    value={project.bid_due_date ? new Date(project.bid_due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
                   />
                 </div>
               </div>
