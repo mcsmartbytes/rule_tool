@@ -95,7 +95,7 @@ function ProjectCard({ project, onClick }: { project: HvacProject; onClick: () =
   };
 
   const status = statusColors[project.status] || statusColors.draft;
-  const dueDate = project.due_date ? new Date(project.due_date) : null;
+  const dueDate = project.bid_due_date ? new Date(project.bid_due_date) : null;
   const now = new Date();
   const isOverdue = dueDate && dueDate < now && !['won', 'lost', 'archived'].includes(project.status);
 
