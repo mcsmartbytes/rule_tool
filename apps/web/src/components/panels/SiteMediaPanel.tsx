@@ -3,6 +3,70 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { SiteMedia, SiteMediaCategory } from '@/lib/supabase/types';
 
+/**
+ * Generate a thumbnail from a video file
+ * Returns a Blob of the thumbnail image (JPEG)
+ */
+async function generateVideoThumbnail(videoFile: File, seekTime = 1): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+
+    const cleanup = () => {
+      URL.revokeObjectURL(video.src);
+      video.remove();
+      canvas.remove();
+    };
+
+    video.onloadedmetadata = () => {
+      // Seek to specified time or 10% of duration, whichever is less
+      video.currentTime = Math.min(seekTime, video.duration * 0.1);
+    };
+
+    video.onseeked = () => {
+      // Set canvas dimensions (max 400px width for thumbnail)
+      const scale = Math.min(1, 400 / video.videoWidth);
+      canvas.width = video.videoWidth * scale;
+      canvas.height = video.videoHeight * scale;
+
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => {
+            cleanup();
+            resolve(blob);
+          },
+          'image/jpeg',
+          0.8
+        );
+      } else {
+        cleanup();
+        resolve(null);
+      }
+    };
+
+    video.onerror = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    // Set timeout for slow videos
+    setTimeout(() => {
+      if (!video.paused) {
+        cleanup();
+        resolve(null);
+      }
+    }, 10000);
+
+    video.src = URL.createObjectURL(videoFile);
+  });
+}
+
 interface SiteMediaWithUrls extends SiteMedia {
   mediaUrl: string | null;
   thumbnailUrl: string | null;
@@ -64,6 +128,15 @@ export function SiteMediaPanel({ siteId }: SiteMediaPanelProps) {
       formData.append('file', file);
       formData.append('siteId', siteId);
       formData.append('category', selectedCategory);
+
+      // Generate thumbnail for videos
+      const isVideo = file.type.startsWith('video/');
+      if (isVideo) {
+        const thumbnail = await generateVideoThumbnail(file);
+        if (thumbnail) {
+          formData.append('thumbnail', thumbnail, `${file.name}-thumb.jpg`);
+        }
+      }
 
       try {
         const response = await fetch('/api/site-media', {
@@ -198,6 +271,13 @@ export function SiteMediaPanel({ siteId }: SiteMediaPanelProps) {
             >
               {item.media_type === 'video' ? (
                 <div className="video-thumbnail">
+                  {item.thumbnailUrl ? (
+                    <img
+                      src={item.thumbnailUrl}
+                      alt={item.caption || 'Video thumbnail'}
+                      loading="lazy"
+                    />
+                  ) : null}
                   <svg className="play-icon" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
                   </svg>

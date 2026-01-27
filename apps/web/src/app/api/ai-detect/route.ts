@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body: AIDetectRequest = await request.json();
-    const { image, bounds, zoom, imageWidth, imageHeight, industry } = body;
+    const { image, bounds, zoom, imageWidth, imageHeight, industry, featureTypes } = body;
 
     // Validate required fields
     if (!image || !bounds || !zoom || !imageWidth || !imageHeight) {
@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
       imageHeight,
       scale,
       industry,
+      featureTypes, // Pass selected feature types for focused detection
     });
 
     // Initialize Anthropic client

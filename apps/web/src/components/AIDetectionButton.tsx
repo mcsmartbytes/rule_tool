@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import * as turf from '@turf/turf';
 import type { AIDetectedFeature, AIDetectResponse, MapBounds } from '@/lib/ai/types';
+import { DetectionModeSelector } from './DetectionModeSelector';
 
 interface AIDetectionButtonProps {
   onCaptureRequest: () => Promise<{
@@ -19,6 +20,8 @@ interface AIDetectionButtonProps {
   selectionPolygon?: GeoJSON.Polygon | GeoJSON.MultiPolygon | null;
   /** Show only features within selection */
   filterToSelection?: boolean;
+  /** Skip the mode selector and detect all (legacy behavior) */
+  skipModeSelector?: boolean;
 }
 
 type DetectionStatus = 'idle' | 'capturing' | 'analyzing' | 'complete' | 'error';
@@ -30,10 +33,13 @@ export function AIDetectionButton({
   disabled = false,
   selectionPolygon,
   filterToSelection = false,
+  skipModeSelector = false,
 }: AIDetectionButtonProps) {
   const [status, setStatus] = useState<DetectionStatus>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showModeSelector, setShowModeSelector] = useState(false);
+  const [pendingFeatureTypes, setPendingFeatureTypes] = useState<string[] | null>(null);
 
   // Filter features to only those within the selection polygon
   const filterFeaturesToSelection = (features: AIDetectedFeature[], polygon: GeoJSON.Polygon | GeoJSON.MultiPolygon): AIDetectedFeature[] => {
@@ -58,12 +64,31 @@ export function AIDetectionButton({
     });
   };
 
-  const handleDetect = async () => {
+  // Called when user clicks the button
+  const handleButtonClick = () => {
     if (status !== 'idle' && status !== 'error') return;
 
+    if (skipModeSelector) {
+      // Legacy behavior: detect all immediately
+      runDetection([]);
+    } else {
+      // Show the mode selector first
+      setShowModeSelector(true);
+    }
+  };
+
+  // Called when user selects what to detect from the modal
+  const handleModeSelect = (featureTypes: string[]) => {
+    setShowModeSelector(false);
+    runDetection(featureTypes);
+  };
+
+  // Run the actual detection with selected feature types
+  const runDetection = async (featureTypes: string[]) => {
     setStatus('capturing');
     setProgress(10);
     setErrorMessage(null);
+    setPendingFeatureTypes(featureTypes);
 
     try {
       // Step 1: Capture map
@@ -86,6 +111,7 @@ export function AIDetectionButton({
           imageWidth: captureResult.width,
           imageHeight: captureResult.height,
           industry: 'all',
+          featureTypes: featureTypes.length > 0 ? featureTypes : undefined, // Only send if filtering
         }),
       });
 
@@ -164,9 +190,16 @@ export function AIDetectionButton({
 
   return (
     <div className="ai-detection-button-wrapper">
+      {showModeSelector && (
+        <DetectionModeSelector
+          onSelect={handleModeSelect}
+          onCancel={() => setShowModeSelector(false)}
+        />
+      )}
+
       <button
         className={`ai-detection-button ${status}`}
-        onClick={handleDetect}
+        onClick={handleButtonClick}
         disabled={disabled || (status !== 'idle' && status !== 'error')}
         title={errorMessage || 'Use AI to detect site features'}
       >
