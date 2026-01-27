@@ -5,16 +5,6 @@ import Link from 'next/link';
 import { useHvacStore } from '@/lib/hvac';
 import type { HvacProject, HvacProjectStatus } from '@/lib/hvac/types';
 
-// Format currency helper
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 // Stat card component
 function StatCard({
   label,
@@ -202,22 +192,6 @@ function ProjectCard({ project, onClick }: { project: HvacProject; onClick: () =
         )}
       </div>
 
-      {/* Footer with estimate value */}
-      {project.total_estimated_cost && (
-        <div style={{
-          marginTop: '16px',
-          paddingTop: '16px',
-          borderTop: '1px solid #e5e7eb',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <span style={{ fontSize: '13px', color: '#6b7280' }}>Estimated Value</span>
-          <span style={{ fontSize: '18px', fontWeight: 700, color: '#059669' }}>
-            {formatCurrency(project.total_estimated_cost)}
-          </span>
-        </div>
-      )}
     </div>
   );
 }
@@ -338,13 +312,11 @@ export default function HvacDashboard() {
           client_name: 'Metro Healthcare Systems',
           project_number: 'HVAC-2024-001',
           building_type: 'healthcare',
-          square_footage: 125000,
+          total_sqft: 125000,
           num_floors: 5,
           climate_zone: '4a',
           status: 'in_progress',
-          due_date: '2024-02-15',
-          total_estimated_cost: 2850000,
-          confidence_score: 82,
+          bid_due_date: '2024-02-15',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -355,11 +327,11 @@ export default function HvacDashboard() {
           client_name: 'Silicon Valley Innovations',
           project_number: 'HVAC-2024-002',
           building_type: 'office',
-          square_footage: 75000,
+          total_sqft: 75000,
           num_floors: 3,
           climate_zone: '3c',
           status: 'draft',
-          due_date: '2024-03-01',
+          bid_due_date: '2024-03-01',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -369,14 +341,12 @@ export default function HvacDashboard() {
           name: 'Riverside Apartments Complex',
           client_name: 'Urban Living Developments',
           project_number: 'HVAC-2024-003',
-          building_type: 'residential_multi',
-          square_footage: 200000,
+          building_type: 'multi_family',
+          total_sqft: 200000,
           num_floors: 12,
           climate_zone: '5a',
           status: 'review',
-          due_date: '2024-02-01',
-          total_estimated_cost: 1650000,
-          confidence_score: 75,
+          bid_due_date: '2024-02-01',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -389,11 +359,11 @@ export default function HvacDashboard() {
   // Calculate stats
   const totalProjects = projects.length;
   const activeProjects = projects.filter(p => ['draft', 'in_progress', 'review'].includes(p.status)).length;
-  const totalPipelineValue = projects
+  const totalSqft = projects
     .filter(p => !['won', 'lost', 'archived'].includes(p.status))
-    .reduce((sum, p) => sum + (p.total_estimated_cost || 0), 0);
-  const avgConfidence = projects.filter(p => p.confidence_score).length > 0
-    ? Math.round(projects.filter(p => p.confidence_score).reduce((sum, p) => sum + (p.confidence_score || 0), 0) / projects.filter(p => p.confidence_score).length)
+    .reduce((sum, p) => sum + (p.total_sqft || 0), 0);
+  const avgFloors = projects.filter(p => p.num_floors).length > 0
+    ? Math.round(projects.filter(p => p.num_floors).reduce((sum, p) => sum + (p.num_floors || 0), 0) / projects.filter(p => p.num_floors).length)
     : 0;
 
   if (isLoading) {
@@ -450,23 +420,23 @@ export default function HvacDashboard() {
           }
         />
         <StatCard
-          label="Pipeline Value"
-          value={formatCurrency(totalPipelineValue)}
-          color="#059669"
+          label="Total Sq Ft"
+          value={`${totalSqft.toLocaleString()} SF`}
+          color="#10b981"
           icon={
             <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 11h18M3 15h18M3 19h18" />
             </svg>
           }
         />
         <StatCard
-          label="Avg Confidence"
-          value={`${avgConfidence}%`}
-          subtext="Estimate accuracy"
-          color={avgConfidence >= 75 ? '#059669' : avgConfidence >= 50 ? '#f59e0b' : '#ef4444'}
+          label="Avg Floors"
+          value={avgFloors}
+          subtext="Active projects"
+          color={avgFloors >= 5 ? '#059669' : avgFloors >= 3 ? '#f59e0b' : '#ef4444'}
           icon={
             <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
             </svg>
           }
         />
