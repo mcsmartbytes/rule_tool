@@ -2935,6 +2935,88 @@ select option {
   overflow: hidden;
 }
 
+/* Blueprint Analysis Panel (Site Page) */
+.blueprint-analysis-panel {
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+}
+
+.blueprint-analysis-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--glass-border);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(14, 165, 233, 0.08));
+}
+
+.blueprint-analysis-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.blueprint-analysis-subtitle {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.blueprint-analysis-close {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.blueprint-analysis-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.blueprint-analysis-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.blueprint-analysis-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 6px;
+}
+
+.blueprint-analysis-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--glass-border);
+  margin-bottom: 6px;
+}
+
+.blueprint-analysis-value {
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: 10px;
+}
+
+.blueprint-analysis-empty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 4px;
+}
+
 .overlay-controls-header {
   display: flex;
   align-items: center;

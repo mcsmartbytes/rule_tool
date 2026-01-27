@@ -746,10 +746,12 @@ function AnalysisResultsPanel({
   result,
   onClose,
   onApplyToEstimate,
+  onSendToMap,
 }: {
   result: BlueprintAnalysisResult;
   onClose: () => void;
   onApplyToEstimate: (items: { areas: DetectedArea[]; dimensions: DetectedDimension[]; materials: DetectedMaterial[] }) => void;
+  onSendToMap: (items: { pageNumber: number; areas: DetectedArea[]; dimensions: DetectedDimension[]; materials: DetectedMaterial[] }) => void;
 }) {
   const [selectedAreas, setSelectedAreas] = useState<Set<string>>(new Set(result.areas?.map(a => a.id) || []));
   const [selectedDimensions, setSelectedDimensions] = useState<Set<string>>(new Set(result.dimensions?.map(d => d.id) || []));
@@ -767,6 +769,15 @@ function AnalysisResultsPanel({
 
   const handleApply = () => {
     onApplyToEstimate({
+      areas: result.areas?.filter(a => selectedAreas.has(a.id)) || [],
+      dimensions: result.dimensions?.filter(d => selectedDimensions.has(d.id)) || [],
+      materials: result.materials?.filter(m => selectedMaterials.has(m.id)) || [],
+    });
+  };
+
+  const handleSendToMap = () => {
+    onSendToMap({
+      pageNumber: result.pageNumber,
       areas: result.areas?.filter(a => selectedAreas.has(a.id)) || [],
       dimensions: result.dimensions?.filter(d => selectedDimensions.has(d.id)) || [],
       materials: result.materials?.filter(m => selectedMaterials.has(m.id)) || [],
@@ -1127,6 +1138,22 @@ function AnalysisResultsPanel({
           Cancel
         </button>
         <button
+          onClick={handleSendToMap}
+          style={{
+            flex: 1,
+            padding: '10px 16px',
+            background: '#0ea5e9',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >
+          Send to Map
+        </button>
+        <button
           onClick={handleApply}
           style={{
             flex: 1,
@@ -1291,6 +1318,26 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
 
     // Navigate to the estimate page to show breakdown
     router.push('/estimate');
+  }, [documentId, router]);
+
+  const handleSendToMap = useCallback((items: {
+    pageNumber: number;
+    areas: DetectedArea[];
+    dimensions: DetectedDimension[];
+    materials: DetectedMaterial[];
+  }) => {
+    const exportData = {
+      documentId,
+      pageNumber: items.pageNumber,
+      areas: items.areas,
+      dimensions: items.dimensions,
+      materials: items.materials,
+      timestamp: Date.now(),
+    };
+
+    sessionStorage.setItem('blueprintAnalysisMap', JSON.stringify(exportData));
+    setShowResultsPanel(null);
+    router.push('/site?mode=analysis');
   }, [documentId, router]);
 
   if (isLoading) {
@@ -1520,6 +1567,7 @@ export default function BlueprintDetailPage({ params }: { params: Promise<{ id: 
           result={analysisResults.get(showResultsPanel)!}
           onClose={() => setShowResultsPanel(null)}
           onApplyToEstimate={handleApplyToEstimate}
+          onSendToMap={handleSendToMap}
         />
       )}
 

@@ -19,6 +19,7 @@ import { AIReviewPanel } from '@/components/AIReviewPanel';
 import type { AIDetectedFeature } from '@/lib/ai/types';
 import { usePricingStore } from '@/lib/pricing-store';
 import { SiteMediaPanel } from '@/components/panels/SiteMediaPanel';
+import type { DetectedArea, DetectedDimension, DetectedMaterial } from '@/lib/blueprint/analysis-types';
 
 // Blueprint overlay data structure
 export interface BlueprintOverlay {
@@ -30,6 +31,15 @@ export interface BlueprintOverlay {
   // Position on map (corners: [topLeft, topRight, bottomRight, bottomLeft] as [lng, lat])
   corners?: [[number, number], [number, number], [number, number], [number, number]];
   opacity?: number;
+}
+
+interface BlueprintAnalysisBreakdown {
+  documentId: string;
+  pageNumber: number;
+  areas: DetectedArea[];
+  dimensions: DetectedDimension[];
+  materials: DetectedMaterial[];
+  timestamp: number;
 }
 
 function SitePageInner() {
@@ -49,6 +59,9 @@ function SitePageInner() {
   // Blueprint overlay state
   const [blueprintOverlay, setBlueprintOverlay] = useState<BlueprintOverlay | null>(null);
   const [overlayOpacity, setOverlayOpacity] = useState(0.7);
+
+  // Blueprint analysis breakdown state
+  const [blueprintBreakdown, setBlueprintBreakdown] = useState<BlueprintAnalysisBreakdown | null>(null);
 
   // Site media panel state
   const [showMediaPanel, setShowMediaPanel] = useState(false);
@@ -235,9 +248,32 @@ function SitePageInner() {
     }
   }, [mounted, searchParams, overlayOpacity]);
 
+  // Load blueprint analysis breakdown when mode=analysis
+  useEffect(() => {
+    if (!mounted) return;
+
+    const mode = searchParams?.get('mode');
+    if (mode === 'analysis') {
+      try {
+        const stored = sessionStorage.getItem('blueprintAnalysisMap');
+        if (stored) {
+          const breakdownData = JSON.parse(stored);
+          setBlueprintBreakdown(breakdownData);
+          sessionStorage.removeItem('blueprintAnalysisMap');
+        }
+      } catch (err) {
+        console.error('Failed to load blueprint breakdown:', err);
+      }
+    }
+  }, [mounted, searchParams]);
+
   // Handler to clear the overlay
   const handleClearOverlay = useCallback(() => {
     setBlueprintOverlay(null);
+  }, []);
+
+  const handleClearBlueprintBreakdown = useCallback(() => {
+    setBlueprintBreakdown(null);
   }, []);
 
   // Get pricing store for committing measurements
@@ -505,6 +541,84 @@ function SitePageInner() {
 
         {/* Right Panel - Estimates */}
         <aside className="site-panel site-panel-right">
+          {blueprintBreakdown && (
+            <div className="blueprint-analysis-panel">
+              <div className="blueprint-analysis-header">
+                <div>
+                  <div className="blueprint-analysis-title">Blueprint Breakdown</div>
+                  <div className="blueprint-analysis-subtitle">
+                    Page {blueprintBreakdown.pageNumber}
+                  </div>
+                </div>
+                <button
+                  onClick={handleClearBlueprintBreakdown}
+                  className="blueprint-analysis-close"
+                  title="Dismiss breakdown"
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="blueprint-analysis-body">
+                <div className="blueprint-analysis-section">
+                  <div className="blueprint-analysis-section-title">
+                    Areas ({blueprintBreakdown.areas.length})
+                  </div>
+                  {blueprintBreakdown.areas.length === 0 ? (
+                    <div className="blueprint-analysis-empty">No areas detected</div>
+                  ) : (
+                    blueprintBreakdown.areas.map((area) => (
+                      <div key={area.id} className="blueprint-analysis-row">
+                        <span>
+                          {area.label || area.subType || area.type}
+                        </span>
+                        <span className="blueprint-analysis-value">
+                          {area.areaSqFt ? `${area.areaSqFt.toLocaleString()} SF` : '—'}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="blueprint-analysis-section">
+                  <div className="blueprint-analysis-section-title">
+                    Dimensions ({blueprintBreakdown.dimensions.length})
+                  </div>
+                  {blueprintBreakdown.dimensions.length === 0 ? (
+                    <div className="blueprint-analysis-empty">No dimensions detected</div>
+                  ) : (
+                    blueprintBreakdown.dimensions.map((dimension) => (
+                      <div key={dimension.id} className="blueprint-analysis-row">
+                        <span>{dimension.text || dimension.measures || 'Dimension'}</span>
+                        <span className="blueprint-analysis-value">
+                          {dimension.value ? `${dimension.value} ${dimension.unit || ''}`.trim() : '—'}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="blueprint-analysis-section">
+                  <div className="blueprint-analysis-section-title">
+                    Materials ({blueprintBreakdown.materials.length})
+                  </div>
+                  {blueprintBreakdown.materials.length === 0 ? (
+                    <div className="blueprint-analysis-empty">No materials detected</div>
+                  ) : (
+                    blueprintBreakdown.materials.map((material) => (
+                      <div key={material.id} className="blueprint-analysis-row">
+                        <span>{material.material}</span>
+                        <span className="blueprint-analysis-value">
+                          {material.appliesTo || material.category || '—'}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           <ErrorBoundary label="TradePanel">
             <TradePanel />
           </ErrorBoundary>
