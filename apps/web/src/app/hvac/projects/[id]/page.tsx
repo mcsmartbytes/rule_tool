@@ -119,10 +119,10 @@ export default function ProjectDetailPage() {
 
       // Demo equipment
       setEquipment([
-        { id: '1', project_id: projectId, equipment_type: 'ahu', model: 'Trane M-Series', capacity_tons: 50, quantity: 4, unit_cost: 45000, confidence: 85, created_at: '', updated_at: '' },
-        { id: '2', project_id: projectId, equipment_type: 'chiller', model: 'Carrier 30XA', capacity_tons: 200, quantity: 2, unit_cost: 175000, confidence: 90, created_at: '', updated_at: '' },
-        { id: '3', project_id: projectId, equipment_type: 'boiler', model: 'Cleaver-Brooks', capacity_mbh: 2000, quantity: 2, unit_cost: 85000, confidence: 80, created_at: '', updated_at: '' },
-        { id: '4', project_id: projectId, equipment_type: 'vav_box', model: 'Trane VAV', capacity_cfm: 1200, quantity: 48, unit_cost: 1800, confidence: 75, created_at: '', updated_at: '' },
+        { id: '1', project_id: projectId, equipment_type: 'ahu', model: 'Trane M-Series', cooling_tons: 50, quantity: 4, equipment_cost: 45000, ai_confidence: 85, created_at: '', updated_at: '' },
+        { id: '2', project_id: projectId, equipment_type: 'chiller', model: 'Carrier 30XA', cooling_tons: 200, quantity: 2, equipment_cost: 175000, ai_confidence: 90, created_at: '', updated_at: '' },
+        { id: '3', project_id: projectId, equipment_type: 'boiler', model: 'Cleaver-Brooks', heating_mbh: 2000, quantity: 2, equipment_cost: 85000, ai_confidence: 80, created_at: '', updated_at: '' },
+        { id: '4', project_id: projectId, equipment_type: 'vav_box', model: 'Trane VAV', cfm: 1200, quantity: 48, equipment_cost: 1800, ai_confidence: 75, created_at: '', updated_at: '' },
       ]);
 
       // Demo checklist
