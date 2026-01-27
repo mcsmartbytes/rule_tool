@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useHvacStore } from '@/lib/hvac';
-import type { HvacProject, ProjectStatus } from '@/lib/hvac/types';
+import type { HvacProject, HvacProjectStatus } from '@/lib/hvac/types';
 
 // Format currency helper
 function formatCurrency(value: number): string {
@@ -84,7 +84,7 @@ function StatCard({
 
 // Project card component
 function ProjectCard({ project, onClick }: { project: HvacProject; onClick: () => void }) {
-  const statusColors: Record<ProjectStatus, { bg: string; text: string; label: string }> = {
+  const statusColors: Record<HvacProjectStatus, { bg: string; text: string; label: string }> = {
     draft: { bg: '#f3f4f6', text: '#4b5563', label: 'Draft' },
     in_progress: { bg: '#dbeafe', text: '#1d4ed8', label: 'In Progress' },
     review: { bg: '#fef3c7', text: '#d97706', label: 'Review' },
