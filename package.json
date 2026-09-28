@@ -16,7 +16,7 @@
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "turbo": "^2.5.3",
+    "turbo": "^2.11.4",
     "typescript": "^5.6.3"
   },
   "packageManager": "npm@10.0.0",
